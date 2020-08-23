@@ -1,3 +1,5 @@
+[TOC]
+
 ### SpringCloud2020
 
 #### 1. 微服务架构理论
@@ -5,19 +7,19 @@
 
 #### 2. 版本选择
 ##### 2.1 SpringBoot版本选择
-> git源码地址：<https://github.com/spring-projects/spring-boot/releases/>
+> git源码地址：<https://github.com/spring-projects/spring-boot/releases/>  
 > SpringBoot2.0新特性：https://github.com/spring-projects/spring-boot/wiki/Spring-Boot-2.0-Release-Notes
 
 &emsp; 官方强烈建议升级到2.x以上版本
 ##### 2.2 SpringCloud版本选择
-> git源码地址：https://github.com/spring-projects/spring-cloud/wiki
+> git源码地址：<https://github.com/spring-projects/spring-cloud/wiki>  
 > 官网：https://spring.io/projects/spring-cloud
 
 ##### 2.3 SpringCloud Alibaba版本选择
 &emsp; xxxxxxxxxxxxxxxxxxx
 ##### 2.4 SpringBoot 和 SpringCloud 版本依赖关系
-> https://spring.io/projects/spring-cloud#overview
-> https://start.spring.io/actuator/info 查看 json
+> <https://spring.io/projects/spring-cloud#overview>  
+> <https://start.spring.io/actuator/info> 查看 json
 
 &emsp;同时用boot和cloud，需要照顾cloud，由cloud决定boot版本
 
@@ -26,7 +28,7 @@
 
 #### 4. 微服务架构编码构建
 &emsp; 约定 > 配置 > 编码  
-maven下载不了 -> https://blog.csdn.net/HeyWeCome/article/details/104543411
+maven下载不了 -> <https://blog.csdn.net/HeyWeCome/article/details/104543411>
 
 #### 5. Eureka 服务注册与发现
 ##### 5.1 Eureka 配置
@@ -74,6 +76,10 @@ eureka:
     prefer-ip-address: true
     #指定实例id
     instance-id: ${spring.application.name}:${server.port}
+    #eureka客户端向服务端发送心跳时间间隔，默认30s
+    lease-renewal-interval-in-seconds: 30
+    #eureka服务端在收到最后一次心跳后的等待时间，超时将删除服务，90s
+    lease-expiration-duration-in-seconds: 90
   client:
     #表示是否向注册中心注册自己
     register-with-eureka: true
@@ -82,11 +88,61 @@ eureka:
     service-url:
       # 设置与eureka server交互的地址查询服务和注册服务都需要这个地址
       defaultZone: http://127.0.0.1:7002/eureka/
+  server:
+    #是否开启自我保护机制，默认为true
+    enable-self-preservation: true
+    #清理无效节点的时间间隔，默认60000毫秒，即60秒
+    eviction-interval-timer-in-ms: 60000
 ```
-##### 5.2 Eureka 自我保护机制
+##### 5.2 Eureka discoveryClient 服务发现
+```java
+@RestController
+public class OrderController {
+    @Autowired
+    private DiscoveryClient discoveryClient;
+    @GetMapping("/discoveryClient")
+    public Object discoveryClient() {
+        discoveryClient.getInstances("cloud-payment-service").forEach(System.out::println);
+        return this.discoveryClient;
+    }
+}
+//--- output ---
+//org.springframework.cloud.netflix.eureka.EurekaDiscoveryClient$EurekaServiceInstance@4918212c
+//org.springframework.cloud.netflix.eureka.EurekaDiscoveryClient$EurekaServiceInstance@47dfd67f
+```
+```json
+{
+  "discoveryClients": [
+    {
+      "services": [
+        "cloud-payment-service",
+        "cloud-consumer-order",
+        "cloud-eureka-server"
+      ],
+      "order": 0
+    },
+    {
+      "services": [
+        
+      ],
+      "order": 0
+    }
+  ],
+  "services": [
+    "cloud-payment-service",
+    "cloud-consumer-order",
+    "cloud-eureka-server"
+  ],
+  "order": 0
+}
+```
+
+##### 5.3 Eureka 自我保护机制
+&emsp; 某时刻某一个微服务不可用了，Eureka不会立刻清理，依旧会对该微服务的信息进行保存,属于CAP里面的AP分支
 &emsp; Eureka Server 在运行期间会去统计心跳失败比例在 15 分钟之内是否低于 85%，如果低于 85%，Eureka Server 会将这些实例保护起来，让这些实例不会过期，但是在保护期内如果服务刚好这个服务提供者非正常下线了，此时服务消费者就会拿到一个无效的服务实例，此时会调用失败，对于这个问题需要服务消费者端要有一些容错机制，如重试，断路器等。
 &emsp; 我们在单机测试的时候很容易满足心跳失败比例在 15 分钟之内低于 85%，这个时候就会触发 Eureka 的保护机制，一旦开启了保护机制，则服务注册中心维护的服务实例就不是那么准确了，此时我们可以使用eureka.server.enable-self-preservation=false来关闭保护机制，这样可以确保注册中心中不可用的实例被及时的剔除（不推荐）。
 &emsp; 自我保护模式被激活的条件是：在 1 分钟后，Renews (last min) < Renews threshold。
+
 + Renews threshold ：Eureka Server 期望每分钟收到客户端实例续约的总数。
 + Renews (last min) ：Eureka Server 最后 1 分钟收到客户端实例续约的总数。 
 
