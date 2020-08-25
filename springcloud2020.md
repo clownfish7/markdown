@@ -39,7 +39,7 @@ maven下载不了 -> <https://blog.csdn.net/HeyWeCome/article/details/104543411>
 	<artifactId>spring-cloud-starter-netflix-eureka-server</artifactId>
 </dependency>
 ```
-&emsp; Springboot 启动类
+&emsp; Springboot 启动类, @EnableDiscoveryClient 可取代 @EnableEurekaServer
 ```java
 @SpringBootApplication
 @EnableEurekaServer
@@ -162,12 +162,73 @@ public class OrderController {
 
 #### 8. Ribbon 负载均衡服务调用
 &emsp; xxxxxxxxxxxxxxxxxxx
+&emsp; openFeign 中内置了 ribbon ，负载均衡默认采用轮询算法，默认超时参数为 1 秒
+org.springframework.cloud.netflix.ribbon.RibbonClientConfiguration
+```java
+public class RibbonClientConfiguration {
+    @Bean
+    @ConditionalOnMissingBean
+    public IClientConfig ribbonClientConfig() {
+        DefaultClientConfigImpl config = new DefaultClientConfigImpl();
+        config.loadProperties(this.name);
+        config.set(CommonClientConfigKey.ConnectTimeout, 1000);
+        config.set(CommonClientConfigKey.ReadTimeout, 1000);
+        config.set(CommonClientConfigKey.GZipPayload, true);
+        return config;
+    }
+}
+```
 
 #### 9. OpenFeign 服务接口调用
 &emsp; xxxxxxxxxxxxxxxxxxx
+```yaml
+ribbon:
+  #请求处理的超时时间
+  ReadTimeout: 5000
+  #请求连接的超时时间
+  ConnectTimeout: 5000
+  #最大重试次数，当Eureka中可以找到服务，但是服务连不上时将会重试，如果eureka中找不到服务则直接走断路器,不包括首次调用
+  MaxAutoRetries: 2
+  #切换实例的重试次数,不包括首次调用
+  MaxAutoRetriesNextServer: 3
+  #对所有操作请求都进行重试，如果是get则可以，如果是post，put等操作没有实现幂等的情况下是很危险的,所以设置为false
+  OkToRetryOnAllOperations: false
+feign:
+  hystrix:
+    enabled: false
+
+# 一般情况下 都是 ribbon 的超时时间（<）hystrix的超时时间（因为涉及到ribbon的重试机制）
+# timeoutInMilliseconds的配置时间为:(1+MaxAutoRetries+MaxAutoRetriesNextServer)*ReadTimeout
+hystrix:
+  command:
+    default:
+      execution:
+        isolation:
+          thread:
+            timeoutInMilliseconds: 18000
+        timeout:
+          #开启hystrix,为false将超时控制交给ribbon
+          enabled: true
+```
 
 #### 10. Hystrix 断路器
+##### Hystrix介绍
+&emsp; 在微服务场景中，通常会有很多层的服务调用。如果一个底层服务出现问题，故障会被向上传播给用户。我们需要一种机制，当底层服务不可用时，可以阻断故障的传播。这就是断路器的作用。他是系统服务稳定性的最后一重保障。
+       在springcloud中断路器组件就是Hystrix。Hystrix也是Netflix套件的一部分。他的功能是，当对某个服务的调用在一定的时间内（默认10s），有超过一定次数（默认20次）并且失败率超过一定值（默认50%），该服务的断路器会打开。返回一个由开发者设定的fallback。
+       fallback可以是另一个由Hystrix保护的服务调用，也可以是固定的值。fallback也可以设计成链式调用，先执行某些逻辑，再返回fallback。  
+
+##### Hystrix作用
+
 &emsp; xxxxxxxxxxxxxxxxxxx
+&emsp; 默认配置：com.netflix.hystrix.HystrixCommandProperties
+
+![head](https://gitee.com/clownfish7/image/raw/master/head/head.jpg 'head')
+
+![RUNOOB 图标](http://static.runoob.com/images/runoob-logo.png '123')
+
+##### 10.1 服务降级
+##### 10.2 服务熔断
+##### 10.3 服务限流
 
 #### 11. Zuul 网关
 &emsp; xxxxxxxxxxxxxxxxxxx
@@ -187,7 +248,7 @@ public class OrderController {
 #### 16. SpringCloud Sleuth 分布式请求链路追踪
 &emsp; xxxxxxxxxxxxxxxxxxx
 
-#### 17. SpringCloud Alibaba 入门简洁
+#### 17. SpringCloud Alibaba 入门简介
 &emsp; xxxxxxxxxxxxxxxxxxx
 
 #### 18. SpringCloud Alibaba Nacos 服务注册和配置中心
