@@ -39,7 +39,7 @@ maven下载不了 -> <https://blog.csdn.net/HeyWeCome/article/details/104543411>
 	<artifactId>spring-cloud-starter-netflix-eureka-server</artifactId>
 </dependency>
 ```
-&emsp; Springboot 启动类, @EnableDiscoveryClient 可取代 @EnableEurekaServer
+&emsp; Springboot 启动类, zookeeper，consul等使用@EnableDiscoveryClient 
 ```java
 @SpringBootApplication
 @EnableEurekaServer
@@ -155,10 +155,204 @@ public class OrderController {
 
 &emsp; 所以，Eureka 的自我保护模式最好还是开启它。
 #### 6. Zookeeper 服务注册与发现
-&emsp; xxxxxxxxxxxxxxxxxxx
+&emsp;Eureka停止更新 <https://github.com/Netflix/eureka/wiki>   
+zookeeper是一个分布式协调工具，可以实现注册中心功能，zookeeper服务器取代Eureka服务器，zk作为服务注册中心
+
+##### 6.1 Zookeeper 服务提供者
+&emsp; pom 引入依赖,注意 spring-cloud-starter-zookeeper-discovery 自带 zookeeper ，若与服务器上版本不一致则排除该 jar，引入对应版本
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <parent>
+        <artifactId>springcloud2020</artifactId>
+        <groupId>com.clownfish7</groupId>
+        <version>1.0.0</version>
+    </parent>
+    <modelVersion>4.0.0</modelVersion>
+
+    <artifactId>cloud-provider-payment8004</artifactId>
+
+    <dependencies>
+        <!--SpringBoot整合Zookeeper客户端-->
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-starter-zookeeper-discovery</artifactId>
+            <exclusions>
+                <!--先排除自带的zookeeper3.5.3-->
+                <exclusion>
+                    <groupId>org.apache.zookeeper</groupId>
+                    <artifactId>zookeeper</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <!--添加zookeeper3.4.6版本-->
+        <dependency>
+            <groupId>org.apache.zookeeper</groupId>
+            <artifactId>zookeeper</artifactId>
+            <version>3.4.6</version>
+        </dependency>
+        <!--...-->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency
+    </dependencies>
+</project>
+```
+&emsp; application.yml
+```yml
+server:
+  port: 8004
+
+spring:
+  application:
+    name: cloud-consumer-payment
+  cloud:
+    zookeeper:
+      connect-string: 127.0.0.1:2181
+```
+&emsp; 正常编写 Controller
+
+##### 6.2 Zookeeper 服务消费者
+&emsp; pom 引入依赖,与上述服务提供者一致  
+&emsp; application.yml，与上述服务提供者一致  
+&emsp; 开启注解，注入 restTemplate，开启负载均衡  
+```java
+@SpringBootApplication
+@EnableDiscoveryClient
+public class Order80Application {
+    public static void main(String[] args) {
+        SpringApplication.run(Order80Application.class, args);
+    }
+
+    @Bean
+    @LoadBalanced
+    public RestTemplate restTemplate() {
+        return new RestTemplate();
+    }
+}
+```
+&emsp; 调用服务提供者  
+```java
+@RestController
+@RequestMapping("/payment")
+public class OrderZkController {
+
+    private static final String INVOKE_URL = "http://cloud-provider-payment";
+
+    @Autowired
+    private RestTemplate restTemplate;
+
+    @GetMapping("/payment/zk")
+    public String get() {
+        String result = restTemplate.getForObject(INVOKE_URL + "/payment/zk", String.class);
+        return result;
+    }
+
+}
+```
 
 #### 7. Consul 服务注册与发现
-&emsp; xxxxxxxxxxxxxxxxxxx
+&emsp; cocnsul 是 Go 语言编写的一款注册中心服务，<https://www.consul.io/intro/index.html>  
+consul 提供以下功能：
++ 服务发现 提供 http 和 dns 两种发现方式
++ 健康检测 支持多种协议，http,tcp,docker,shell定制脚本
++ kv存储 key，value 的存储方式
++ 多数据中心 consul 支持多数据中心
++ 可视化 web 界面
+
+下载地址： <https://www.consul.io/downloads.html>  
+中文文档： <https://www.springcloud.cc/spring-cloud-consul.html>  
+安装说明： <https://learn.hashicorp.com/consul/getting-started/install.html>  
+访问地址： <http://localhost:8500>  
+
+##### 7.1 Consul 服务提供者
+&emsp; pom 引入依赖
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <parent>
+        <artifactId>springcloud2020</artifactId>
+        <groupId>com.clownfish7</groupId>
+        <version>1.0.0</version>
+    </parent>
+    <modelVersion>4.0.0</modelVersion>
+
+    <artifactId>cloud-provider-payment8004</artifactId>
+
+    <dependencies>
+        <!--SpringBoot整合consul客户端-->
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-starter-consul-discovery</artifactId>
+        </dependency>
+        <!--...-->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency
+    </dependencies>
+</project>
+```
+&emsp; application.yml
+```yml
+server:
+  port: 8006
+
+spring:
+  application:
+    name: cloud-provider-payment
+  cloud:
+    consul:
+      host: localhost
+      port: 8500
+      discovery:
+        service-name: ${spring.application.name}
+```
+&emsp; 正常编写 Controller
+
+##### 7.2 Consul 服务消费者
+&emsp; pom 引入依赖,与上述服务提供者一致  
+&emsp; application.yml，与上述服务提供者一致  
+&emsp; 开启注解，注入 restTemplate，开启负载均衡  
+```java
+@SpringBootApplication
+@EnableDiscoveryClient
+public class Order80Application {
+    public static void main(String[] args) {
+        SpringApplication.run(Order80Application.class, args);
+    }
+
+    @Bean
+    @LoadBalanced
+    public RestTemplate restTemplate() {
+        return new RestTemplate();
+    }
+}
+```
+&emsp; 调用服务提供者  
+```java
+@RestController
+@RequestMapping("/payment")
+public class OrderConsulController {
+
+    private static final String INVOKE_URL = "http://cloud-provider-payment";
+
+    @Autowired
+    private RestTemplate restTemplate;
+
+    @GetMapping("/payment/consul")
+    public String get() {
+        String result = restTemplate.getForObject(INVOKE_URL + "/payment/consul", String.class);
+        return result;
+    }
+
+}
+```
 
 #### 8. Ribbon 负载均衡服务调用
 &emsp; xxxxxxxxxxxxxxxxxxx
