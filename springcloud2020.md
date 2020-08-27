@@ -3,7 +3,13 @@
 ### SpringCloud2020
 
 #### 1. 微服务架构理论
-&emsp; xxxxxxxxxxxxxxxxxxx
+> 什么是微服务架构：<https://www.zhihu.com/question/289101554/answer/734306979>  
+ 
+&emsp; 微服务是一种架构概念，旨在通过将功能分解到各个离散的服务中已实现对解决的解耦。你可以将其看作是在架构层次而非获取服务的类上应用很多 SOLID 原则。
+微服务架构是一个很有趣的概念，它的主要作用是将功能分解到离散的各个服务中，从而降低系统的耦合性，并提供更加灵活的服务支持。
+概念：把一个大型的单个应用程序和服务拆分为数个甚至数十个的支持服务，它可扩展单个组件而不是整个的应用程序堆栈，从而满足服务等级协议。
+定义：围绕业务领域组件来创建应用，这些应用可以独立的进行开发，管理，和迭代。在分散的组件中使用云架构和平台式部署，管理和服务功能。使产品交付变得更加简单。
+本质：用一些功能比较明确，业务比较精炼的服务区解决更大，更实际的问题
 
 #### 2. 版本选择
 ##### 2.1 SpringBoot版本选择
@@ -437,10 +443,8 @@ public RestTemplate restTemplate() {
 ```java
 @Test
 public void testRibbon() {
-    //服务id
     String serviceId = "xxxxx";
     for (int i = 0; i < 10; i++) {
-        //通过服务id调用
         ResponseEntity<Map> forEntity = restTemplate.getForEntity("http://"+serviceId+"/page/get/5a754adf6abb500ad05688d9", Map.class);
         Map body = forEntity.getBody();
     }
@@ -476,7 +480,16 @@ public class RibbonClientConfiguration {
     }
 }
 ```
+##### 9.1 OpenFeign 配置
+&emsp; pom 引入依赖
+```xml
+<dependency>
+    <groupId>org.springframework.cloud</groupId>
+    <artifactId>spring-cloud-starter-openfeign</artifactId>
+</dependency>
+```
 
+&emsp; application.yml 配置参数
 ```yaml
 ribbon:
   #请求处理的超时时间
@@ -491,7 +504,7 @@ ribbon:
   OkToRetryOnAllOperations: false
 feign:
   hystrix:
-    enabled: false
+    enabled: true
 
 # 一般情况下 都是 ribbon 的超时时间（<）hystrix的超时时间（因为涉及到ribbon的重试机制）
 # timeoutInMilliseconds的配置时间为:(1+MaxAutoRetries+MaxAutoRetriesNextServer)*ReadTimeout
@@ -506,6 +519,79 @@ hystrix:
           #开启hystrix,为false将超时控制交给ribbon
           enabled: true
 ```
+```yaml
+# ribbon参数也可以直接配在feignClient下面，相较于ribbon：可能会美观一点
+feign:
+  hystrix:
+    enabled: true
+  client:
+    config:
+      default:
+        connectTimeout: 50000
+        readTimeout: 50000
+        maxAutoRetries: 2
+        maxAutoRetriesNextServer: 3
+        okToRetryOnAllOperations: false
+        loggerLevel: full
+```
+
+&emsp; 启动类上标识开启 openFeign
+```java
+@EnableDiscoveryClient
+@EnableFeignClients
+@EnableHystrix
+@SpringBootApplication(exclude = {DataSourceAutoConfiguration.class})
+public class MyApplication {
+}
+```
+
+##### 9.2 OpenFeign 配置日志
+```java
+@Configuration
+public class FeignConfig {
+    @Bean
+    Logger.Level feignLoggerLevel() {
+        //这里记录所有，根据实际情况选择合适的日志level
+        return Logger.Level.FULL;
+    }
+}
+```
+
+##### 9.3 OpenFeign 服务降级
+&emsp; 统一配置 feignClient, value=微服务名字, contextId 自定义需要唯一，建议微服务名+Client名, fallback=降级时调用对应类方法  
+`SysDepartmentClientFallBack.class` 需实现该 client 接口的所有方法并且加上 `@component` 注解, configuration 可以指定配置
+```java
+@FeignClient(value = "PONY-API-ORIGINAL-STATIC", contextId = "PONY-API-ORIGINAL-STATIC-SysDepartmentClient", fallback = SysDepartmentClientFallBack.class, configuration = FeignConfig.class)
+public interface SysDepartmentClient {
+
+    @PostMapping("/department/insert")
+    public boolean insert(@RequestBody SysDepartment department);
+
+    @PostMapping("/department/insertBatch")
+    public boolean insertBatch(@RequestBody List<SysDepartment> departmentList);
+
+    @PutMapping("/department/updateById")
+    public boolean updateById(@RequestBody SysDepartment department);
+
+    @DeleteMapping("/department/delete/{id}")
+    public boolean deleteById(@PathVariable("id") String id);
+
+    @GetMapping("/department/get/{id}")
+    public SysDepartment getById(@PathVariable("id") String id);
+
+    @GetMapping("/department/getAll")
+    public List<SysDepartment> getAll();
+
+    @PostMapping("/department/search")
+    public List<SysDepartment> search(@RequestBody Map<String, Object> params);
+
+    @PostMapping("/department/searchPage/{page}/{size}")
+    public Page<SysDepartment> searchPage(@RequestBody Map<String, Object> params, @PathVariable("page") int page, @PathVariable("size") int size);
+
+}
+```
+
+
 
 #### 10. Hystrix 断路器
 ##### Hystrix介绍
@@ -513,16 +599,108 @@ hystrix:
        在springcloud中断路器组件就是Hystrix。Hystrix也是Netflix套件的一部分。他的功能是，当对某个服务的调用在一定的时间内（默认10s），有超过一定次数（默认20次）并且失败率超过一定值（默认50%），该服务的断路器会打开。返回一个由开发者设定的fallback。
        fallback可以是另一个由Hystrix保护的服务调用，也可以是固定的值。fallback也可以设计成链式调用，先执行某些逻辑，再返回fallback。  
 
+##### 服务雪崩 (雪崩的时候没有一片❄是无辜的)
+&emsp; 多个微服务之间调用的时候，假如 微服务A调用微服务B和微服务C，微服务B和微服务C又调用其它的微服务，这就是所谓的 扇出。如果扇出的链路上某个微服务的调用响应时间过长或者不可用，对微服务A的调用就会占用越来越多的系统资源，从而引起系统崩溃，这就是所谓的 "雪崩效应"。
+       对于高流量的应用来说，单一的后端依赖可能会导致 所有服务器 上的 所有资源 在几秒内饱和。比失败更糟糕的是，这些应用程序还可能导致服务之间的延迟增加，备份队列，线程和其他系统资源紧张，导致整个系统发生更多的 级联故障。这些都需要对故障和延迟就行隔离和管理，以便单个依赖关系的失败，不能取消整个应用程序或系统的宕机。
+       通常，当你发现一个模块下的某个实例失败后，这时候这个模块依然还会接收流量，然而这个问题模块还调用了其他模块，这就会导致级联故障，或者叫 雪崩。
+       这种级联故障的避免，就需要有一种兜底的方案，或者一种链路终断的方案。这就是"服务降级"。
+
 ##### Hystrix作用
 
-&emsp; xxxxxxxxxxxxxxxxxxx
+&emsp; Hystrix ，又称豪猪哥。是一个用于处理分布式系统的 延迟 和 容错 的开源库。在分布式系统中，许多依赖不可避免的会调用失败，比如：超时、异常等原因。Hystrix 能够保证在一个依赖出现问题的情况下， 不会导致整体服务失败，避免级联故障，以提高分布式系统的弹性。
+       断路器 本身是一种开关装置。当某个服务单元发生故障之后，通过 断路器 的故障监控（类似熔断保险丝），向调用方返回一个符合预期的、可处理的备选响应（FallBack），而不是长时间的等待或者抛出调用调用无法处理的异常，这样就保证了服务调用方的线程不会被长时间、不必要的占用，从而避免了故障在分布式系统中的蔓延，乃至雪崩。
+       Hystrix 的功能就是 服务降级、服务熔断、接近实时的监控、服务限流、服务隔离，最重要的还是前面三个功能。 Hystrix 官网使用介绍：https://github.com/Netflix/Hystrix/wiki/How-To-Use
+       Hystrix 在 消费端、服务端 根据定义的规则，都能使用 服务降级、限流（比如，服务端约定等待3s 返回，但是客户端只让等待 2s，就可以再客户端 添加 Hystrix。这些都可以根据自己情况），一般用在消费端。
 &emsp; 默认配置：com.netflix.hystrix.HystrixCommandProperties 超时 1 秒会 fallback
+```java
+public abstract class HystrixCommandProperties {
+    /* defaults */
+    /* package */ static final Integer default_metricsRollingStatisticalWindow = 10000;// default => statisticalWindow: 10000 = 10 seconds (and default of 10 buckets so each bucket is 1 second)
+    private static final Integer default_metricsRollingStatisticalWindowBuckets = 10;// default => statisticalWindowBuckets: 10 = 10 buckets in a 10 second window so each bucket is 1 second
+    private static final Integer default_circuitBreakerRequestVolumeThreshold = 20;// default => statisticalWindowVolumeThreshold: 20 requests in 10 seconds must occur before statistics matter
+    private static final Integer default_circuitBreakerSleepWindowInMilliseconds = 5000;// default => sleepWindow: 5000 = 5 seconds that we will sleep before trying again after tripping the circuit
+    private static final Integer default_circuitBreakerErrorThresholdPercentage = 50;// default => errorThresholdPercentage = 50 = if 50%+ of requests in 10 seconds are failures or latent then we will trip the circuit
+    private static final Boolean default_circuitBreakerForceOpen = false;// default => forceCircuitOpen = false (we want to allow traffic)
+    /* package */ static final Boolean default_circuitBreakerForceClosed = false;// default => ignoreErrors = false 
+    private static final Integer default_executionTimeoutInMilliseconds = 1000; // default => executionTimeoutInMilliseconds: 1000 = 1 second
+    private static final Boolean default_executionTimeoutEnabled = true;
+    private static final ExecutionIsolationStrategy default_executionIsolationStrategy = ExecutionIsolationStrategy.THREAD;
+    private static final Boolean default_executionIsolationThreadInterruptOnTimeout = true;
+    private static final Boolean default_executionIsolationThreadInterruptOnFutureCancel = false;
+    private static final Boolean default_metricsRollingPercentileEnabled = true;
+    private static final Boolean default_requestCacheEnabled = true;
+    private static final Integer default_fallbackIsolationSemaphoreMaxConcurrentRequests = 10;
+    private static final Boolean default_fallbackEnabled = true;
+    private static final Integer default_executionIsolationSemaphoreMaxConcurrentRequests = 10;
+    private static final Boolean default_requestLogEnabled = true;
+    private static final Boolean default_circuitBreakerEnabled = true;
+    private static final Integer default_metricsRollingPercentileWindow = 60000; // default to 1 minute for RollingPercentile 
+    private static final Integer default_metricsRollingPercentileWindowBuckets = 6; // default to 6 buckets (10 seconds each in 60 second window)
+    private static final Integer default_metricsRollingPercentileBucketSize = 100; // default to 100 values max per bucket
+    private static final Integer default_metricsHealthSnapshotIntervalInMilliseconds = 500; // default to 500ms as max frequency between allowing snapshots of health (error percentage etc)
+}
+```
 
-![head](https://gitee.com/clownfish7/image/raw/master/head/head.jpg 'head')
 
 ##### 10.1 服务降级
+&emsp; 当服务器忙时，友好提示客户 "请稍候再试" ，不让客户端处于一直等待状态，并立刻返回一个友好提示。
+当服务器压力剧增的情况下，根据实际业务情况及流量，对一些服务和页面有策略的不处理或换种简单的方式处理，从而释放服务器资源以保证核心交易正常运作或高效运作。
+    比如电商平台，在针对 618、双11 等高峰情形下采用的部分服务不出现或者延时出现的情形。比较典型的就是支付，在0点进行支付，由于大量请求的集中涌入，服务器压力瞬间过大，从而导致数据返回超时等情况，这时就需要对支付模块进行服务降级处理。比如说：接口超过3s没有返回数据，就提示"数据加载失败，被挤爆了的提示"，在中断当前支付请求的同时，进行了友好的提示。
+
 ##### 10.2 服务熔断
+&emsp; 服务熔断：类似于我们家用的保险丝，当某服务出现不可用或响应超时的情况时，为了防止整个系统出现雪崩，暂时 停止对该服务的调用 。过一段时间，服务器会慢慢进行恢复，直到完全恢复服务提供。
+服务降级和服务熔断的区别：
++ 服务降级 → 当前服务还是可用的；（比如有10个线程，谁抢到谁用，抢不到如果超时报提错误提示，下一次抢到还能继续提供服务）
++ 服务熔断 → 当前服务不可用，但是它会逐渐恢复服务提供；(拉闸，整个家用电器都不能用；然后测试开5个电器没问题，6个也没问题，逐渐的就恢复服务提供)
+
 ##### 10.3 服务限流
+&emsp; 服务限流场景：一般应用在 秒杀，高并发 等操作。严禁一窝蜂的过来拥挤，大家排队，一秒钟只允许通过 N 个，有序进行。
+
+##### 简单配置使用
+&emsp; 引入相关依赖并开启注解 `@EnableCircuitBreaker`
+```xml
+<dependency>
+    <groupId>org.springframework.cloud</groupId>
+    <artifactId>spring-cloud-starter-netflix-hystrix</artifactId>
+</dependency>
+```
+&emsp; 在需要降级/熔断/限流的方法上加注解，优先级： method > class > config
+```java
+@HystrixCommand(
+        fallbackMethod = "method_fallback",
+        commandProperties = {
+                @HystrixProperty(name = "circuitBreaker.enabled", value = "true"),// 是否开启断路器
+                @HystrixProperty(name = "circuitBreaker.requestVolumeThreshold", value = "3"),// 请求次数
+                @HystrixProperty(name = "circuitBreaker.sleepWindowInMilliseconds", value = "10000"),// 时间窗口期/时间范文
+                @HystrixProperty(name = "circuitBreaker.errorThresholdPercentage", value = "50")// 失败率达到多少后跳闸
+        },
+        threadPoolProperties = {
+                // @HystrixProperty(name = "xx", value = "xx")
+        }
+)
+public String method(@PathVariable("id") Integer id) {
+    return "ok";
+}
+
+public String method_fallback(@PathVariable("id") Integer id) {
+    return "fallback";
+}
+```
+&emsp; 每个方法都有一个 fallback_method , 未免有些代码膨胀, 况且业务方法 和 自定义降级方法 混合在一起(业务逻辑方法 和 处理服务降级、熔断方法 揉在一块)
+&emsp; 解决方法：使用 @DefaultProperties(defaultFallback = "xxx") 的方式，定义全局 服务降级 方法, @HystrixCommand 注解加在对应方法上即可
+```java
+@DefaultProperties(defaultFallback = "global_fallback_method") // 使用@DefaultProperties 定义全局服务降级方法
+public class HystrixController {
+    // 定义全局服务降级方法(不能有参数)
+    public String global_fallback_method(){
+        return "~~~~我是,全局服务降级方法";
+    }
+}
+
+```
+
+
+
 ##### 10.4 Hystrix 全部配置一览
 此部分内容，可参考官方文档：https://github.com/Netflix/Hystrix/wiki/Configuration#execution.isolation.strategy
 ```java
@@ -597,8 +775,213 @@ hystrix:
 )
 ```
 
+##### 10.5 Hystrix 统一配置
+```java
+@Controller
+public class HelloController {
+
+  @GetMapping("hello/{name}")
+  @ResponseBody
+  public Object hello(@PathVariable("name") String name) {
+    System.out.println("hello request come in. timestamp:" + System.currentTimeMillis());
+    return service.doSth(name);
+  }
+
+  @Resource
+  private HelloService service;
+}
+
+@Service
+public class HelloService {
+
+  @HystrixCommand(groupKey = "helloGroup", commandKey = "hello")
+  public String doSth(String username) {
+    try {
+      Thread.sleep(2000);
+    } catch (InterruptedException e) {
+      e.printStackTrace();
+    }
+    return username + " do something.";
+  }
+}
+```
+&emsp; 最简单的方式就是通过HystrixCommand注解来启用Hystrix，但是这里比较麻烦的是，多个方法都要使用HystrixCommand，那注解每个都要写，
+而且同一个组内的command应该公用同一个配置，那么请看下面的application.yml的配置，解决问题
+调用第三方系统helloGroup走HyStrixCommand
+```yaml
+hystrix:
+  threadpool:
+    helloGroup:
+      coreSize: 10
+      maximumSize: 10
+      maxQueueSize: -1
+```
+&emsp; 针对不同的组在配置文件里面加上不同的配置就好了，在@MyCommand注解里面指定group为abc就行；其他的配置也是这个规则，还有默认的配置是default；
+这样可以把一个组的配置独立出来，便于配置，而且开发者也会方便很多，代码简洁；下面附上所有的配置项供参考
+
+```yaml
+#default可替换
+hystrix:
+  command:
+    default:
+      execution:
+        isolation:
+          #线程池隔离还是信号量隔离 默认是THREAD 信号量是SEMAPHORE
+          strategy: THREAD
+          semaphore:
+            #使用信号量隔离时，支持的最大并发数 默认10
+            maxConcurrentRequests: 10
+          thread:
+            #command的执行的超时时间 默认是1000
+            timeoutInMilliseconds: 2000
+            #HystrixCommand.run()执行超时时是否被打断 默认true
+            interruptOnTimeout: true
+            #HystrixCommand.run()被取消时是否被打断 默认false
+            interruptOnCancel: false
+        timeout:
+          #command执行时间超时是否抛异常 默认是true
+          enabled: true
+        fallback:
+          #当执行失败或者请求被拒绝，是否会尝试调用hystrixCommand.getFallback()
+          enabled: true
+          isolation:
+            semaphore:
+              #如果并发数达到该设置值，请求会被拒绝和抛出异常并且fallback不会被调用 默认10
+              maxConcurrentRequests: 10
+      circuitBreaker:
+        #用来跟踪熔断器的健康性，如果未达标则让request短路 默认true
+        enabled: true
+        #一个rolling window内最小的请求数。如果设为20，那么当一个rolling window的时间内
+        #（比如说1个rolling window是10秒）收到19个请求，即使19个请求都失败，也不会触发circuit break。默认20
+        requestVolumeThreshold: 5
+        # 触发短路的时间值，当该值设为5000时，则当触发circuit break后的5000毫秒内
+        #都会拒绝request，也就是5000毫秒后才会关闭circuit，放部分请求过去。默认5000
+        sleepWindowInMilliseconds: 5000
+        #错误比率阀值，如果错误率>=该值，circuit会被打开，并短路所有请求触发fallback。默认50
+        errorThresholdPercentage: 50
+        #强制打开熔断器，如果打开这个开关，那么拒绝所有request，默认false
+        forceOpen: false
+        #强制关闭熔断器 如果这个开关打开，circuit将一直关闭且忽略
+        forceClosed: false
+      metrics:
+        rollingStats:
+          #设置统计的时间窗口值的，毫秒值，circuit break 的打开会根据1个rolling window的统计来计算。若rolling window被设为10000毫秒，
+          #则rolling window会被分成n个buckets，每个bucket包含success，failure，timeout，rejection的次数的统计信息。默认10000
+          timeInMilliseconds: 10000
+          #设置一个rolling window被划分的数量，若numBuckets＝10，rolling window＝10000，
+          #那么一个bucket的时间即1秒。必须符合rolling window % numberBuckets == 0。默认10
+          numBuckets: 10
+        rollingPercentile:
+          #执行时是否enable指标的计算和跟踪，默认true
+          enabled: true
+          #设置rolling percentile window的时间，默认60000
+          timeInMilliseconds: 60000
+          #设置rolling percentile window的numberBuckets。逻辑同上。默认6
+          numBuckets: 6
+          #如果bucket size＝100，window＝10s，若这10s里有500次执行，
+          #只有最后100次执行会被统计到bucket里去。增加该值会增加内存开销以及排序的开销。默认100
+          bucketSize: 100
+        healthSnapshot:
+          #记录health 快照（用来统计成功和错误绿）的间隔，默认500ms
+          intervalInMilliseconds: 500
+      requestCache:
+        #默认true，需要重载getCacheKey()，返回null时不缓存
+        enabled: true
+      requestLog:
+        #记录日志到HystrixRequestLog，默认true
+        enabled: true
+  collapser:
+    default:
+      #单次批处理的最大请求数，达到该数量触发批处理，默认Integer.MAX_VALUE
+      maxRequestsInBatch: 2147483647
+      #触发批处理的延迟，也可以为创建批处理的时间＋该值，默认10
+      timerDelayInMilliseconds: 10
+      requestCache:
+        #是否对HystrixCollapser.execute() and HystrixCollapser.queue()的cache，默认true
+        enabled: true
+  threadpool:
+    default:
+      #并发执行的最大线程数，默认10
+      coreSize: 10
+      #Since 1.5.9 能正常运行command的最大支付并发数
+      maximumSize: 10
+      #BlockingQueue的最大队列数，当设为－1，会使用SynchronousQueue，值为正时使用LinkedBlcokingQueue。
+      #该设置只会在初始化时有效，之后不能修改threadpool的queue size，除非reinitialising thread executor。
+      #默认－1。
+      maxQueueSize: -1
+      #即使maxQueueSize没有达到，达到queueSizeRejectionThreshold该值后，请求也会被拒绝。
+      #因为maxQueueSize不能被动态修改，这个参数将允许我们动态设置该值。if maxQueueSize == -1，该字段将不起作用
+      queueSizeRejectionThreshold: 5
+      #Since 1.5.9 该属性使maximumSize生效，值须大于等于coreSize，当设置coreSize小于maximumSize
+      allowMaximumSizeToDivergeFromCoreSize: false
+      #如果corePoolSize和maxPoolSize设成一样（默认实现）该设置无效。
+      #如果通过plugin（https://github.com/Netflix/Hystrix/wiki/Plugins）使用自定义实现，该设置才有用，默认1.
+      keepAliveTimeMinutes: 1
+      metrics:
+        rollingStats:
+          #线程池统计指标的时间，默认10000
+          timeInMilliseconds: 10000
+          #将rolling window划分为n个buckets，默认10
+          numBuckets: 10
+```
+
+##### 10.6 Hystrix Dashboard
+&emsp; Hystrix Dashboard 是豪猪哥的监控面板，可以监控服务状态，被监控的服务需有 actuator 依赖引入
+
+&emsp; pom
+```xml
+<dependency>
+    <groupId>org.springframework.cloud</groupId>
+    <artifactId>spring-cloud-starter-netflix-hystrix-dashboard</artifactId>
+</dependency>
+<dependency>
+    <groupId>org.springframework.cloud</groupId>
+    <artifactId>spring-cloud-starter-netflix-hystrix</artifactId>
+</dependency>
+```
+
+&emsp; 启动类加注解
+```java
+@EnableHystrixDashboard
+@SpringBootApplication
+public class Dashboard9001Application {
+    public static void main(String[] args) {
+        SpringApplication.run(Dashboard9001Application.class, args);
+    }
+}
+```
+&emsp; 此时可以访问 dashboard 了 http://localhost:9001/hystrix  
+![dashboard1](https://gitee.com/clownfish7/image/raw/master/hystrix/dashboard1.png 'dashboard1')
+&emsp; 如果连不上对应服务，需要在需要监控的服务上开启一个指标输出，如果连上了一直在 loading 图表则说明该服务没指标数据，需要访问几次服务接口即可
+```java
+/**
+ * 此配置是为了服务监控而配置，与服务容错本身无观，springCloud 升级之后的坑
+ * ServletRegistrationBean因为springboot的默认路径不是/hystrix.stream
+ * 只要在自己的项目中配置上下面的servlet即可
+ *
+ * @return
+ */
+@Bean
+public ServletRegistrationBean getServlet() {
+    HystrixMetricsStreamServlet streamServlet = new HystrixMetricsStreamServlet();
+    ServletRegistrationBean<HystrixMetricsStreamServlet> registrationBean = new ServletRegistrationBean<>(streamServlet);
+    registrationBean.setLoadOnStartup(1);
+    registrationBean.addUrlMappings("/hystrix.stream");
+    registrationBean.setName("HystrixMetricsStreamServlet");
+    return registrationBean;
+}
+```
+![dashboard2](https://gitee.com/clownfish7/image/raw/master/hystrix/dashboard2.png 'dashboard2')
+![dashboard3](https://gitee.com/clownfish7/image/raw/master/hystrix/dashboard3.png 'dashboard3')
+
+
 #### 11. Zuul 网关
-&emsp; xxxxxxxxxxxxxxxxxxx
+&emsp; Zuul包含了对请求的路由和过滤两个最主要的功能:
+> 其中路由功能负责将外部请求转发到具体的微服务实例上，是实现外部访问统一入口的基础.
+  而过滤器功能则负责对请求的处理过程进行干预，是实现请求校验、服务聚合等功能的基础.
+  Zuul和Eureka进行整合，将Zuul自身注册为Eureka服务治理下的应用，同时从Eureka中获得其他微服务的消息，也即以后的访问微服务都是通过Zuul跳转后获得。  
+> 官网资料：<https://github.com/Netflix/zuul/wiki/Getting-Started>  
+
 &emsp; pom 引入依赖
 ```xml
 <dependency>
