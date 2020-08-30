@@ -4,8 +4,8 @@
 
 #### 1. 微服务架构理论
 > 什么是微服务架构：<https://www.zhihu.com/question/289101554/answer/734306979>  
- 
-&emsp; 微服务是一种架构概念，旨在通过将功能分解到各个离散的服务中已实现对解决的解耦。你可以将其看作是在架构层次而非获取服务的类上应用很多 SOLID 原则。
+
+  微服务是一种架构概念，旨在通过将功能分解到各个离散的服务中已实现对解决的解耦。你可以将其看作是在架构层次而非获取服务的类上应用很多 SOLID 原则。
 微服务架构是一个很有趣的概念，它的主要作用是将功能分解到离散的各个服务中，从而降低系统的耦合性，并提供更加灵活的服务支持。
 概念：把一个大型的单个应用程序和服务拆分为数个甚至数十个的支持服务，它可扩展单个组件而不是整个的应用程序堆栈，从而满足服务等级协议。
 定义：围绕业务领域组件来创建应用，这些应用可以独立的进行开发，管理，和迭代。在分散的组件中使用云架构和平台式部署，管理和服务功能。使产品交付变得更加简单。
@@ -16,13 +16,13 @@
 > git源码地址：<https://github.com/spring-projects/spring-boot/releases/>  
 > SpringBoot2.0新特性：https://github.com/spring-projects/spring-boot/wiki/Spring-Boot-2.0-Release-Notes
 
-&emsp; 官方强烈建议升级到2.x以上版本
+  官方强烈建议升级到2.x以上版本
 ##### 2.2 SpringCloud版本选择
 > git源码地址：<https://github.com/spring-projects/spring-cloud/wiki>  
 > 官网：https://spring.io/projects/spring-cloud
 
 ##### 2.3 SpringCloud Alibaba版本选择
-&emsp; xxxxxxxxxxxxxxxxxxx
+  xxxxxxxxxxxxxxxxxxx
 ##### 2.4 SpringBoot 和 SpringCloud 版本依赖关系
 > <https://spring.io/projects/spring-cloud#overview>  
 > <https://start.spring.io/actuator/info> 查看 json
@@ -57,21 +57,21 @@
   + √ Nacos
 
 #### 4. 微服务架构编码构建
-&emsp; 约定 > 配置 > 编码  
+  约定 > 配置 > 编码  
 maven下载不了 -> <https://blog.csdn.net/HeyWeCome/article/details/104543411>
 
 #### 5. Eureka 服务注册与发现
-&emsp; Spring Cloud Eureka 是对Netflix公司的Eureka的二次封装，它实现了服务治理的功能，Spring Cloud Eureka提 供服务端与客户端，
+  Spring Cloud Eureka 是对Netflix公司的Eureka的二次封装，它实现了服务治理的功能，Spring Cloud Eureka提 供服务端与客户端，
 服务端即是Eureka服务注册中心，客户端完成微服务向Eureka服务的注册与发现。服务端和 客户端均采用Java语言编写。
 ##### 5.1 Eureka 配置
-&emsp; pom 引入依赖，2.x不同于1.x，显式区分了 client/server 
+  pom 引入依赖，2.x不同于1.x，显式区分了 client/server 
 ```xml
 <dependency>
 	<groupId>org.springframework.cloud</groupId>
 	<artifactId>spring-cloud-starter-netflix-eureka-server</artifactId>
 </dependency>
 ```
-&emsp; Springboot 启动类, zookeeper，consul等使用@EnableDiscoveryClient 
+  Springboot 启动类, zookeeper，consul等使用@EnableDiscoveryClient 
 ```java
 @SpringBootApplication
 @EnableEurekaServer
@@ -81,7 +81,7 @@ public class EurekaApplication {
     }
 }
 ```
-&emsp; application.yml 配置文件
+  application.yml 配置文件
 ```yml
 # 单机版
 eureka:
@@ -170,10 +170,10 @@ public class OrderController {
 ```
 
 ##### 5.3 Eureka 自我保护机制
-&emsp; 某时刻某一个微服务不可用了，Eureka不会立刻清理，依旧会对该微服务的信息进行保存,属于CAP里面的AP分支
-&emsp; Eureka Server 在运行期间会去统计心跳失败比例在 15 分钟之内是否低于 85%，如果低于 85%，Eureka Server 会将这些实例保护起来，让这些实例不会过期，但是在保护期内如果服务刚好这个服务提供者非正常下线了，此时服务消费者就会拿到一个无效的服务实例，此时会调用失败，对于这个问题需要服务消费者端要有一些容错机制，如重试，断路器等。
-&emsp; 我们在单机测试的时候很容易满足心跳失败比例在 15 分钟之内低于 85%，这个时候就会触发 Eureka 的保护机制，一旦开启了保护机制，则服务注册中心维护的服务实例就不是那么准确了，此时我们可以使用eureka.server.enable-self-preservation=false来关闭保护机制，这样可以确保注册中心中不可用的实例被及时的剔除（不推荐）。
-&emsp; 自我保护模式被激活的条件是：在 1 分钟后，Renews (last min) < Renews threshold。
+  某时刻某一个微服务不可用了，Eureka不会立刻清理，依旧会对该微服务的信息进行保存,属于CAP里面的AP分支
+  Eureka Server 在运行期间会去统计心跳失败比例在 15 分钟之内是否低于 85%，如果低于 85%，Eureka Server 会将这些实例保护起来，让这些实例不会过期，但是在保护期内如果服务刚好这个服务提供者非正常下线了，此时服务消费者就会拿到一个无效的服务实例，此时会调用失败，对于这个问题需要服务消费者端要有一些容错机制，如重试，断路器等。
+  我们在单机测试的时候很容易满足心跳失败比例在 15 分钟之内低于 85%，这个时候就会触发 Eureka 的保护机制，一旦开启了保护机制，则服务注册中心维护的服务实例就不是那么准确了，此时我们可以使用eureka.server.enable-self-preservation=false来关闭保护机制，这样可以确保注册中心中不可用的实例被及时的剔除（不推荐）。
+  自我保护模式被激活的条件是：在 1 分钟后，Renews (last min) < Renews threshold。
 
 + Renews threshold ：Eureka Server 期望每分钟收到客户端实例续约的总数。
 + Renews (last min) ：Eureka Server 最后 1 分钟收到客户端实例续约的总数。 
@@ -183,15 +183,15 @@ public class OrderController {
 + 降低renewalPercentThreshold的比例（eureka.server.renewal-percent-threshold设置为0.5以下，比如0.49），不推荐。
 + 部署多个 Eureka Server 并开启其客户端行为（eureka.client.register-with-eureka不要设为false，默认为true），推荐。
 
-&emsp; Eureka 的自我保护模式是有意义的，该模式被激活后，它不会从注册列表中剔除因长时间没收到心跳导致租期过期的服务，而是等待修复，直到心跳恢复正常之后，它自动退出自我保护模式。这种模式旨在避免因网络分区故障导致服务不可用的问题。例如，两个客户端实例 C1 和 C2 的连通性是良好的，但是由于网络故障，C2 未能及时向 Eureka 发送心跳续约，这时候 Eureka 不能简单的将 C2 从注册表中剔除。因为如果剔除了，C1 就无法从 Eureka 服务器中获取 C2 注册的服务，但是这时候 C2 服务是可用的。
+  Eureka 的自我保护模式是有意义的，该模式被激活后，它不会从注册列表中剔除因长时间没收到心跳导致租期过期的服务，而是等待修复，直到心跳恢复正常之后，它自动退出自我保护模式。这种模式旨在避免因网络分区故障导致服务不可用的问题。例如，两个客户端实例 C1 和 C2 的连通性是良好的，但是由于网络故障，C2 未能及时向 Eureka 发送心跳续约，这时候 Eureka 不能简单的将 C2 从注册表中剔除。因为如果剔除了，C1 就无法从 Eureka 服务器中获取 C2 注册的服务，但是这时候 C2 服务是可用的。
 
-&emsp; 所以，Eureka 的自我保护模式最好还是开启它。
+  所以，Eureka 的自我保护模式最好还是开启它。
 #### 6. Zookeeper 服务注册与发现
 &emsp;Eureka停止更新 <https://github.com/Netflix/eureka/wiki>   
 zookeeper是一个分布式协调工具，可以实现注册中心功能，zookeeper服务器取代Eureka服务器，zk作为服务注册中心
 
 ##### 6.1 Zookeeper 服务提供者
-&emsp; pom 引入依赖,注意 spring-cloud-starter-zookeeper-discovery 自带 zookeeper ，若与服务器上版本不一致则排除该 jar，引入对应版本
+  pom 引入依赖,注意 spring-cloud-starter-zookeeper-discovery 自带 zookeeper ，若与服务器上版本不一致则排除该 jar，引入对应版本
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0"
@@ -233,7 +233,7 @@ zookeeper是一个分布式协调工具，可以实现注册中心功能，zooke
     </dependencies>
 </project>
 ```
-&emsp; application.yml
+  application.yml
 ```yml
 server:
   port: 8004
@@ -245,12 +245,12 @@ spring:
     zookeeper:
       connect-string: 127.0.0.1:2181
 ```
-&emsp; 正常编写 Controller
+  正常编写 Controller
 
 ##### 6.2 Zookeeper 服务消费者
-&emsp; pom 引入依赖,与上述服务提供者一致  
-&emsp; application.yml，与上述服务提供者一致  
-&emsp; 开启注解，注入 restTemplate，开启负载均衡  
+  pom 引入依赖,与上述服务提供者一致  
+  application.yml，与上述服务提供者一致  
+  开启注解，注入 restTemplate，开启负载均衡  
 ```java
 @SpringBootApplication
 @EnableDiscoveryClient
@@ -266,7 +266,7 @@ public class Order80Application {
     }
 }
 ```
-&emsp; 调用服务提供者  
+  调用服务提供者  
 ```java
 @RestController
 @RequestMapping("/payment")
@@ -287,7 +287,7 @@ public class OrderZkController {
 ```
 
 #### 7. Consul 服务注册与发现
-&emsp; cocnsul 是 Go 语言编写的一款注册中心服务，<https://www.consul.io/intro/index.html>  
+  cocnsul 是 Go 语言编写的一款注册中心服务，<https://www.consul.io/intro/index.html>  
 consul 提供以下功能：
 + 服务发现 提供 http 和 dns 两种发现方式
 + 健康检测 支持多种协议，http,tcp,docker,shell定制脚本
@@ -301,7 +301,7 @@ consul 提供以下功能：
 访问地址： <http://localhost:8500>  
 
 ##### 7.1 Consul 服务提供者
-&emsp; pom 引入依赖
+  pom 引入依赖
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0"
@@ -330,7 +330,7 @@ consul 提供以下功能：
     </dependencies>
 </project>
 ```
-&emsp; application.yml
+  application.yml
 ```yml
 server:
   port: 8006
@@ -345,12 +345,12 @@ spring:
       discovery:
         service-name: ${spring.application.name}
 ```
-&emsp; 正常编写 Controller
+  正常编写 Controller
 
 ##### 7.2 Consul 服务消费者
-&emsp; pom 引入依赖,与上述服务提供者一致  
-&emsp; application.yml，与上述服务提供者一致  
-&emsp; 开启注解，注入 restTemplate，开启负载均衡  
+  pom 引入依赖,与上述服务提供者一致  
+  application.yml，与上述服务提供者一致  
+  开启注解，注入 restTemplate，开启负载均衡  
 ```java
 @SpringBootApplication
 @EnableDiscoveryClient
@@ -366,7 +366,7 @@ public class Order80Application {
     }
 }
 ```
-&emsp; 调用服务提供者  
+  调用服务提供者  
 ```java
 @RestController
 @RequestMapping("/payment")
@@ -388,14 +388,14 @@ public class OrderConsulController {
 
 #### Eureka Zookeeper Consul 异同点
 | 组件 | 语言 | CAP | 服务健康检查 | 对外暴露接口 | SpringCloud 集成 |
-| --- | --- | --- | --- | --- | --- | 
+| --- | --- | --- | --- | --- | --- |
 | Eureka | Java | AP | 可配 | HTTP | 已集成 |
 | Zookeeper | Java | CP | 支持 | 客户端 | 已集成 |
 | Consul | Go | CP | 支持 | HTTP/DNS | 已集成 |
 
 #### 8. Ribbon 负载均衡服务调用
-&emsp; Ribbon是Netflix公司开源的一个负载均衡的项目（<https://github.com/Netflix/ribbon>），它是一个基于HTTP、 TCP的客户端负载均衡器。
-  
+  Ribbon是Netflix公司开源的一个负载均衡的项目（<https://github.com/Netflix/ribbon>），它是一个基于HTTP、 TCP的客户端负载均衡器。
+
 1. 什么是负载均衡？ 负载均衡是微服务架构中必须使用的技术，通过负载均衡来实现系统的高可用、集群扩容等功能。负载均衡可通过
 硬件设备及软件来实现，硬件比如：F5、Array等，软件比如：LVS、Nginx等。  
 用户请求先到达负载均衡器（也相当于一个服务），负载均衡器根据负载均衡算法将请求转发到微服务。
@@ -405,10 +405,10 @@ public class OrderConsulController {
 2. 什么是客户端负载均衡？ 客户端负载均衡与服务端负载均衡的区别在于客户端要维护一份服务列表，
 Ribbon从 Eureka Server获取服务列表，Ribbon根据负载均衡算法直接请求到具体的微服务，中间省去了负载均衡服务。
 
-&emsp; Spring Cloud引入Ribbon配合 restTemplate 实现客户端负载均衡。Java中远程调用的技术有很多，
+  Spring Cloud引入Ribbon配合 restTemplate 实现客户端负载均衡。Java中远程调用的技术有很多，
 如： webservice、socket、rmi、Apache HttpClient、OkHttp等，互联网项目使用基于http的客户端较多。
 
-&emsp; pom 引入依赖
+  pom 引入依赖
 ```xml
 <dependency>
    <groupId>org.springframework.cloud</groupId>
@@ -420,7 +420,7 @@ Ribbon从 Eureka Server获取服务列表，Ribbon根据负载均衡算法直接
 </dependency>
 ```
 
-&emsp; application.yml 配置 ribbon ,默认超时时间是 1 秒
+  application.yml 配置 ribbon ,默认超时时间是 1 秒
 ```yml
 ribbon:
   MaxAutoRetries: 2 #最大重试次数，当Eureka中可以找到服务，但是服务连不上时将会重试
@@ -430,7 +430,7 @@ ribbon:
   ReadTimeout: 6000 #请求处理的超时时间
 ```
 
-&emsp; 定义RestTemplate，使用@LoadBalanced注解
+  定义RestTemplate，使用@LoadBalanced注解
 ```java
 @Bean
 @LoadBalanced
@@ -439,7 +439,7 @@ public RestTemplate restTemplate() {
 }
 ```
 
-&emsp; 测试代码
+  测试代码
 ```java
 @Test
 public void testRibbon() {
@@ -452,7 +452,7 @@ public void testRibbon() {
 ```
 
 #### 9. OpenFeign 服务接口调用
-&emsp; Feign是Netflix公司开源的轻量级rest客户端，使用Feign可以非常方便的实现Http 客户端。Spring Cloud引入 Feign并且集成了Ribbon实现客户端负载均衡调用。  
+  Feign是Netflix公司开源的轻量级rest客户端，使用Feign可以非常方便的实现Http 客户端。Spring Cloud引入 Feign并且集成了Ribbon实现客户端负载均衡调用。  
 
 Feign工作原理如下：
 1. 启动类添加@EnableFeignClients注解，Spring会扫描标记了@FeignClient注解的接口，并生成此接口的代理对象
@@ -464,7 +464,7 @@ SpringCloud对Feign进行了增强兼容了SpringMVC的注解 ，我们在使用
 1. feignClient接口 有参数在参数必须加@PathVariable("XXX")和@RequestParam("XXX")
 2. feignClient返回值为复杂对象时其类型必须有`无参构造函数`。
 
-&emsp; openFeign 中内置了 ribbon ，负载均衡默认采用轮询算法，默认超时参数为 1 秒
+  openFeign 中内置了 ribbon ，负载均衡默认采用轮询算法，默认超时参数为 1 秒
 org.springframework.cloud.netflix.ribbon.RibbonClientConfiguration
 ```java
 public class RibbonClientConfiguration {
@@ -481,7 +481,7 @@ public class RibbonClientConfiguration {
 }
 ```
 ##### 9.1 OpenFeign 配置
-&emsp; pom 引入依赖
+  pom 引入依赖
 ```xml
 <dependency>
     <groupId>org.springframework.cloud</groupId>
@@ -489,7 +489,7 @@ public class RibbonClientConfiguration {
 </dependency>
 ```
 
-&emsp; application.yml 配置参数
+  application.yml 配置参数
 ```yaml
 ribbon:
   #请求处理的超时时间
@@ -535,7 +535,7 @@ feign:
         loggerLevel: full
 ```
 
-&emsp; 启动类上标识开启 openFeign
+  启动类上标识开启 openFeign
 ```java
 @EnableDiscoveryClient
 @EnableFeignClients
@@ -558,7 +558,7 @@ public class FeignConfig {
 ```
 
 ##### 9.3 OpenFeign 服务降级
-&emsp; 统一配置 feignClient, value=微服务名字, contextId 自定义需要唯一，建议微服务名+Client名, fallback=降级时调用对应类方法  
+  统一配置 feignClient, value=微服务名字, contextId 自定义需要唯一，建议微服务名+Client名, fallback=降级时调用对应类方法  
 `SysDepartmentClientFallBack.class` 需实现该 client 接口的所有方法并且加上 `@component` 注解, configuration 可以指定配置
 ```java
 @FeignClient(value = "PONY-API-ORIGINAL-STATIC", contextId = "PONY-API-ORIGINAL-STATIC-SysDepartmentClient", fallback = SysDepartmentClientFallBack.class, configuration = FeignConfig.class)
@@ -595,23 +595,23 @@ public interface SysDepartmentClient {
 
 #### 10. Hystrix 断路器
 ##### Hystrix介绍
-&emsp; 在微服务场景中，通常会有很多层的服务调用。如果一个底层服务出现问题，故障会被向上传播给用户。我们需要一种机制，当底层服务不可用时，可以阻断故障的传播。这就是断路器的作用。他是系统服务稳定性的最后一重保障。
-       在springcloud中断路器组件就是Hystrix。Hystrix也是Netflix套件的一部分。他的功能是，当对某个服务的调用在一定的时间内（默认10s），有超过一定次数（默认20次）并且失败率超过一定值（默认50%），该服务的断路器会打开。返回一个由开发者设定的fallback。
-       fallback可以是另一个由Hystrix保护的服务调用，也可以是固定的值。fallback也可以设计成链式调用，先执行某些逻辑，再返回fallback。  
+  在微服务场景中，通常会有很多层的服务调用。如果一个底层服务出现问题，故障会被向上传播给用户。我们需要一种机制，当底层服务不可用时，可以阻断故障的传播。这就是断路器的作用。他是系统服务稳定性的最后一重保障。
+  在springcloud中断路器组件就是Hystrix。Hystrix也是Netflix套件的一部分。他的功能是，当对某个服务的调用在一定的时间内（默认10s），有超过一定次数（默认20次）并且失败率超过一定值（默认50%），该服务的断路器会打开。返回一个由开发者设定的fallback。
+  fallback可以是另一个由Hystrix保护的服务调用，也可以是固定的值。fallback也可以设计成链式调用，先执行某些逻辑，再返回fallback。  
 
 ##### 服务雪崩 (雪崩的时候没有一片❄是无辜的)
-&emsp; 多个微服务之间调用的时候，假如 微服务A调用微服务B和微服务C，微服务B和微服务C又调用其它的微服务，这就是所谓的 扇出。如果扇出的链路上某个微服务的调用响应时间过长或者不可用，对微服务A的调用就会占用越来越多的系统资源，从而引起系统崩溃，这就是所谓的 "雪崩效应"。
-       对于高流量的应用来说，单一的后端依赖可能会导致 所有服务器 上的 所有资源 在几秒内饱和。比失败更糟糕的是，这些应用程序还可能导致服务之间的延迟增加，备份队列，线程和其他系统资源紧张，导致整个系统发生更多的 级联故障。这些都需要对故障和延迟就行隔离和管理，以便单个依赖关系的失败，不能取消整个应用程序或系统的宕机。
-       通常，当你发现一个模块下的某个实例失败后，这时候这个模块依然还会接收流量，然而这个问题模块还调用了其他模块，这就会导致级联故障，或者叫 雪崩。
-       这种级联故障的避免，就需要有一种兜底的方案，或者一种链路终断的方案。这就是"服务降级"。
+  多个微服务之间调用的时候，假如 微服务A调用微服务B和微服务C，微服务B和微服务C又调用其它的微服务，这就是所谓的 扇出。如果扇出的链路上某个微服务的调用响应时间过长或者不可用，对微服务A的调用就会占用越来越多的系统资源，从而引起系统崩溃，这就是所谓的 "雪崩效应"。
+  对于高流量的应用来说，单一的后端依赖可能会导致 所有服务器 上的 所有资源 在几秒内饱和。比失败更糟糕的是，这些应用程序还可能导致服务之间的延迟增加，备份队列，线程和其他系统资源紧张，导致整个系统发生更多的 级联故障。这些都需要对故障和延迟就行隔离和管理，以便单个依赖关系的失败，不能取消整个应用程序或系统的宕机。
+  通常，当你发现一个模块下的某个实例失败后，这时候这个模块依然还会接收流量，然而这个问题模块还调用了其他模块，这就会导致级联故障，或者叫 雪崩。
+  这种级联故障的避免，就需要有一种兜底的方案，或者一种链路终断的方案。这就是"服务降级"。
 
 ##### Hystrix作用
 
-&emsp; Hystrix ，又称豪猪哥。是一个用于处理分布式系统的 延迟 和 容错 的开源库。在分布式系统中，许多依赖不可避免的会调用失败，比如：超时、异常等原因。Hystrix 能够保证在一个依赖出现问题的情况下， 不会导致整体服务失败，避免级联故障，以提高分布式系统的弹性。
-       断路器 本身是一种开关装置。当某个服务单元发生故障之后，通过 断路器 的故障监控（类似熔断保险丝），向调用方返回一个符合预期的、可处理的备选响应（FallBack），而不是长时间的等待或者抛出调用调用无法处理的异常，这样就保证了服务调用方的线程不会被长时间、不必要的占用，从而避免了故障在分布式系统中的蔓延，乃至雪崩。
-       Hystrix 的功能就是 服务降级、服务熔断、接近实时的监控、服务限流、服务隔离，最重要的还是前面三个功能。 Hystrix 官网使用介绍：https://github.com/Netflix/Hystrix/wiki/How-To-Use
-       Hystrix 在 消费端、服务端 根据定义的规则，都能使用 服务降级、限流（比如，服务端约定等待3s 返回，但是客户端只让等待 2s，就可以再客户端 添加 Hystrix。这些都可以根据自己情况），一般用在消费端。
-&emsp; 默认配置：com.netflix.hystrix.HystrixCommandProperties 超时 1 秒会 fallback
+  Hystrix ，又称豪猪哥。是一个用于处理分布式系统的 延迟 和 容错 的开源库。在分布式系统中，许多依赖不可避免的会调用失败，比如：超时、异常等原因。Hystrix 能够保证在一个依赖出现问题的情况下， 不会导致整体服务失败，避免级联故障，以提高分布式系统的弹性。
+  断路器 本身是一种开关装置。当某个服务单元发生故障之后，通过 断路器 的故障监控（类似熔断保险丝），向调用方返回一个符合预期的、可处理的备选响应（FallBack），而不是长时间的等待或者抛出调用调用无法处理的异常，这样就保证了服务调用方的线程不会被长时间、不必要的占用，从而避免了故障在分布式系统中的蔓延，乃至雪崩。
+  Hystrix 的功能就是 服务降级、服务熔断、接近实时的监控、服务限流、服务隔离，最重要的还是前面三个功能。 Hystrix 官网使用介绍：https://github.com/Netflix/Hystrix/wiki/How-To-Use
+  Hystrix 在 消费端、服务端 根据定义的规则，都能使用 服务降级、限流（比如，服务端约定等待3s 返回，但是客户端只让等待 2s，就可以再客户端 添加 Hystrix。这些都可以根据自己情况），一般用在消费端。
+  默认配置：com.netflix.hystrix.HystrixCommandProperties 超时 1 秒会 fallback
 ```java
 public abstract class HystrixCommandProperties {
     /* defaults */
@@ -643,28 +643,28 @@ public abstract class HystrixCommandProperties {
 
 
 ##### 10.1 服务降级
-&emsp; 当服务器忙时，友好提示客户 "请稍候再试" ，不让客户端处于一直等待状态，并立刻返回一个友好提示。
+  当服务器忙时，友好提示客户 "请稍候再试" ，不让客户端处于一直等待状态，并立刻返回一个友好提示。
 当服务器压力剧增的情况下，根据实际业务情况及流量，对一些服务和页面有策略的不处理或换种简单的方式处理，从而释放服务器资源以保证核心交易正常运作或高效运作。
-    比如电商平台，在针对 618、双11 等高峰情形下采用的部分服务不出现或者延时出现的情形。比较典型的就是支付，在0点进行支付，由于大量请求的集中涌入，服务器压力瞬间过大，从而导致数据返回超时等情况，这时就需要对支付模块进行服务降级处理。比如说：接口超过3s没有返回数据，就提示"数据加载失败，被挤爆了的提示"，在中断当前支付请求的同时，进行了友好的提示。
+  比如电商平台，在针对 618、双11 等高峰情形下采用的部分服务不出现或者延时出现的情形。比较典型的就是支付，在0点进行支付，由于大量请求的集中涌入，服务器压力瞬间过大，从而导致数据返回超时等情况，这时就需要对支付模块进行服务降级处理。比如说：接口超过3s没有返回数据，就提示"数据加载失败，被挤爆了的提示"，在中断当前支付请求的同时，进行了友好的提示。
 
 ##### 10.2 服务熔断
-&emsp; 服务熔断：类似于我们家用的保险丝，当某服务出现不可用或响应超时的情况时，为了防止整个系统出现雪崩，暂时 停止对该服务的调用 。过一段时间，服务器会慢慢进行恢复，直到完全恢复服务提供。
+  服务熔断：类似于我们家用的保险丝，当某服务出现不可用或响应超时的情况时，为了防止整个系统出现雪崩，暂时 停止对该服务的调用 。过一段时间，服务器会慢慢进行恢复，直到完全恢复服务提供。
 服务降级和服务熔断的区别：
 + 服务降级 → 当前服务还是可用的；（比如有10个线程，谁抢到谁用，抢不到如果超时报提错误提示，下一次抢到还能继续提供服务）
 + 服务熔断 → 当前服务不可用，但是它会逐渐恢复服务提供；(拉闸，整个家用电器都不能用；然后测试开5个电器没问题，6个也没问题，逐渐的就恢复服务提供)
 
 ##### 10.3 服务限流
-&emsp; 服务限流场景：一般应用在 秒杀，高并发 等操作。严禁一窝蜂的过来拥挤，大家排队，一秒钟只允许通过 N 个，有序进行。
+  服务限流场景：一般应用在 秒杀，高并发 等操作。严禁一窝蜂的过来拥挤，大家排队，一秒钟只允许通过 N 个，有序进行。
 
 ##### 简单配置使用
-&emsp; 引入相关依赖并开启注解 `@EnableCircuitBreaker`
+  引入相关依赖并开启注解 `@EnableCircuitBreaker`
 ```xml
 <dependency>
     <groupId>org.springframework.cloud</groupId>
     <artifactId>spring-cloud-starter-netflix-hystrix</artifactId>
 </dependency>
 ```
-&emsp; 在需要降级/熔断/限流的方法上加注解，优先级： method > class > config
+  在需要降级/熔断/限流的方法上加注解，优先级： method > class > config
 ```java
 @HystrixCommand(
         fallbackMethod = "method_fallback",
@@ -686,8 +686,8 @@ public String method_fallback(@PathVariable("id") Integer id) {
     return "fallback";
 }
 ```
-&emsp; 每个方法都有一个 fallback_method , 未免有些代码膨胀, 况且业务方法 和 自定义降级方法 混合在一起(业务逻辑方法 和 处理服务降级、熔断方法 揉在一块)
-&emsp; 解决方法：使用 @DefaultProperties(defaultFallback = "xxx") 的方式，定义全局 服务降级 方法, @HystrixCommand 注解加在对应方法上即可
+  每个方法都有一个 fallback_method , 未免有些代码膨胀, 况且业务方法 和 自定义降级方法 混合在一起(业务逻辑方法 和 处理服务降级、熔断方法 揉在一块)
+  解决方法：使用 @DefaultProperties(defaultFallback = "xxx") 的方式，定义全局 服务降级 方法, @HystrixCommand 注解加在对应方法上即可
 ```java
 @DefaultProperties(defaultFallback = "global_fallback_method") // 使用@DefaultProperties 定义全局服务降级方法
 public class HystrixController {
@@ -805,7 +805,7 @@ public class HelloService {
   }
 }
 ```
-&emsp; 最简单的方式就是通过HystrixCommand注解来启用Hystrix，但是这里比较麻烦的是，多个方法都要使用HystrixCommand，那注解每个都要写，
+  最简单的方式就是通过HystrixCommand注解来启用Hystrix，但是这里比较麻烦的是，多个方法都要使用HystrixCommand，那注解每个都要写，
 而且同一个组内的command应该公用同一个配置，那么请看下面的application.yml的配置，解决问题
 调用第三方系统helloGroup走HyStrixCommand
 ```yaml
@@ -816,7 +816,7 @@ hystrix:
       maximumSize: 10
       maxQueueSize: -1
 ```
-&emsp; 针对不同的组在配置文件里面加上不同的配置就好了，在@MyCommand注解里面指定group为abc就行；其他的配置也是这个规则，还有默认的配置是default；
+  针对不同的组在配置文件里面加上不同的配置就好了，在@MyCommand注解里面指定group为abc就行；其他的配置也是这个规则，还有默认的配置是default；
 这样可以把一个组的配置独立出来，便于配置，而且开发者也会方便很多，代码简洁；下面附上所有的配置项供参考
 
 ```yaml
@@ -926,9 +926,9 @@ hystrix:
 ```
 
 ##### 10.6 Hystrix Dashboard
-&emsp; Hystrix Dashboard 是豪猪哥的监控面板，可以监控服务状态，被监控的服务需有 actuator 依赖引入
+  Hystrix Dashboard 是豪猪哥的监控面板，可以监控服务状态，被监控的服务需有 actuator 依赖引入
 
-&emsp; pom
+  pom
 ```xml
 <dependency>
     <groupId>org.springframework.cloud</groupId>
@@ -940,7 +940,7 @@ hystrix:
 </dependency>
 ```
 
-&emsp; 启动类加注解
+  启动类加注解
 ```java
 @EnableHystrixDashboard
 @SpringBootApplication
@@ -950,9 +950,9 @@ public class Dashboard9001Application {
     }
 }
 ```
-&emsp; 此时可以访问 dashboard 了 http://localhost:9001/hystrix  
+  此时可以访问 dashboard 了 http://localhost:9001/hystrix  
 ![dashboard1](https://gitee.com/clownfish7/image/raw/master/hystrix/dashboard1.png 'dashboard1')
-&emsp; 如果连不上对应服务，需要在需要监控的服务上开启一个指标输出，如果连上了一直在 loading 图表则说明该服务没指标数据，需要访问几次服务接口即可
+  如果连不上对应服务，需要在需要监控的服务上开启一个指标输出，如果连上了一直在 loading 图表则说明该服务没指标数据，需要访问几次服务接口即可
 ```java
 /**
  * 此配置是为了服务监控而配置，与服务容错本身无观，springCloud 升级之后的坑
@@ -976,13 +976,13 @@ public ServletRegistrationBean getServlet() {
 
 
 #### 11. Zuul 网关
-&emsp; Zuul包含了对请求的路由和过滤两个最主要的功能:
+  Zuul包含了对请求的路由和过滤两个最主要的功能:
 > 其中路由功能负责将外部请求转发到具体的微服务实例上，是实现外部访问统一入口的基础.
   而过滤器功能则负责对请求的处理过程进行干预，是实现请求校验、服务聚合等功能的基础.
   Zuul和Eureka进行整合，将Zuul自身注册为Eureka服务治理下的应用，同时从Eureka中获得其他微服务的消息，也即以后的访问微服务都是通过Zuul跳转后获得。  
 > 官网资料：<https://github.com/Netflix/zuul/wiki/Getting-Started>  
 
-&emsp; pom 引入依赖
+  pom 引入依赖
 ```xml
 <dependency>
     <groupId>org.springframework.cloud</groupId>
@@ -994,7 +994,7 @@ public ServletRegistrationBean getServlet() {
 </dependency>
 ```
 
-&emsp; yml 配置
+  yml 配置
 ```yml
 server:
   port: 50201
@@ -1066,7 +1066,7 @@ ribbon:
   ReadTimeout: 6000 #请求处理的超时时间
 ```
 
-&emsp; 开启注解
+  开启注解
 ```java
 @SpringBootApplication
 @EnableZuulProxy//此工程是一个zuul网关
@@ -1078,7 +1078,7 @@ public class GatewayApplication {
 }
 ```
 
-&emsp; zuul 过滤器
+  zuul 过滤器
 ```java
 @Component
 public class LoginFilter extends ZuulFilter {
@@ -1209,28 +1209,599 @@ public class AuthService {
 
 
 #### 12. Gateway 新一代网关
-&emsp; xxxxxxxxxxxxxxxxxxx
+> Gateway官网: <https://cloud.spring.io/spring-cloud-static/spring-cloud-gateway/2.2.1.RELEASE/reference/html/>
+
+  Cloudquan全家桶中有个很重要的组件就是网关，在1.x版本中采用的都是 Zuul 网关；但在2.x版本中，
+zuul 的升级一直跳票，SpringCloud 最后自己研发了一个网关替代 zuul；那就是 SpringCloud-Gateway。
+
+  SpringCloud Gateway 是 SpringCloud 的一个全新项目，基于 Spring5.0 + SpringBoot2.0 和 Project Reactor 等技术开发的网关，
+它旨在为微服务架构提供一种简单有效的统一的 API 路由管理方式。
+  SpringCloud Gateway 作为 SpringCloud 生态系统中的网关，目标是替代 Zuul，在 SpringCloud2.0 以上版本中，没有对 Zuul2.0 以上最新
+高性能版本进行集成，仍然还是使用的 Zuul1.x 非 Reactor 模式的老版本。而为了提升网关的性能，SSpringCloud Gateway 是基于 WebFlux 框架实现的，
+而 WebFlux 框架底层则使用了高性能的 Reactor 模式的通信框架 Netty。
+  SpringCloud Gateway 的目标提供统一的路由方式且基于 Filter 链的方式提供了网关的基本功能，例如安全、监控/指标和限流。
+
+##### 12.1 Gateway 具有的特性
++ 基于 Spring Framework 5、Project Reactor 和 Spring Boot 2.0 进行构建；
++ 动态路由：能够匹配任何请求属性；
++ 可以对路由指定 Predicate(断言) 和 Filter(过滤器)，易于编写；
++ 集成 Hystrix 的断路器功能；
++ 集成 Spring Cloud 服务发现功能（Gateway一样可注册到 Eureka）；
++ 请求限流功能；
++ 支持路径重写；
++ Spring 自家产品，更稳定。
+##### 12.2 Gateway 和 Zuul 的区别
+  在 Spring Cloud Finchley 正式版之前，Spring Cloud 推荐的网关是 Netflix 提供的 Zuul。在这之后，还是更倾向于推荐使用自己的亲儿子：Spring Cloud Gateway。 它两者区别如下：
+1. Zuul 1.x 是一个基于 阻塞 I/O 的 API 网关
+2. Zuul 1.x 基于 Servlet 2.5 使用阻塞架构，它不支持任何长连接（如：websocket）。Zuul的设计模式和 Nginx 类似，每次 I/O 操作都是从工作线程中选择一个执行，请求线程被阻塞到工作线程完成，但是差别是 Nginx 用 C++ 实现，Zuul 用 Java 实现，JVM 本身会有第一次加载较慢的情况，是的 Zuul 的性能相对较差；
+3. Zuul 2.x 理念更先进，但是 Spring Cloud 目前还没有整合。Zuul 2.x 的性能较 Zuul 1.x 有较大提升。在性能方面，根据官方提供的基准测试，Spring Cloud Gateway 的 RPS(每秒请求数)是 Zuul 的 1.6 倍；
+4. Spring Cloud Gateway 建立在 Spring Framework 5、Project Reactor 和 Spring Boot 2.0 之上，使用非阻塞 API；
+5. Spring Cloud Gateway 还支持 WebSocket，并且与 Spring 集成会有更好的开发体验。
+##### 12.3 Gateway 三大概念
+  Route(路由)、Predicate(断言)、Filter（过滤），这三大概念构成了强大的 Gateway。一个web 请求，通过一些匹配条件，最终定位到真正的服务节点。并在这个转发过程的前后，进行一些精细化控制。Predicate 就是我们的匹配条件；而 Filter 就可以理解为一个无所不能的拦截器。有了这两个元素，再加上目标 URI，就可以实现一个具体的路由了。
++ Route(路由)
+  + 路由是构建网关的基本模块，它由ID，目标URI，一系列的断言和过滤器组成，如果断言为 true 则匹配该路由
++ Predicate(断言)
+  + 参考的是 java8 的 java.util.function.Predicate，开发人员可以匹配HTTP请求中的所有内容（例如请求头或请求参数），如果请求URL与断言相匹配（true）则进行路由 
++ Filter(过滤)
+  + 指的是Spring框架中GatewayFilter的实例，使用过滤器，可以在请求被路由前或者之后对请求进行修改。类似 过滤器、拦截器 的概念。
+##### 12.4 Gateway 工作流程
+![gateway1](https://gitee.com/clownfish7/image/raw/master/gateway/gateway1.png 'gateway1')
+
+![gateway2](https://gitee.com/clownfish7/image/raw/master/gateway/gateway2.png 'gateway2')
+##### 12.5 Gateway 使用方式
+  pom.xml 无需引入 web ！
+```xml
+<dependency>
+    <groupId>org.springframework.cloud</groupId>
+    <artifactId>spring-cloud-starter-gateway</artifactId>
+</dependency>
+```
+
+  启动类注解
+```java
+@EnableDiscoveryClient
+@SpringBootApplication
+public class Gateway9527Application {
+    public static void main(String[] args) {
+        SpringApplication.run(Gateway9527Application.class, args);
+    }
+}
+```
+
+  application.yml
+```yml
+server:
+  port: 9527
+
+# 单机版
+spring:
+  application:
+    name: cloud-gateway
+  cloud:
+    # gateway 网关配置
+    gateway:
+      routes:
+        #路由的ID，没有固定规则但要求唯一，建议配合服务名
+        - id: payment_route
+          #匹配后提供服务的路由地址
+          uri: http://localhost:8001
+          #断言
+          predicates:
+              # 路径相匹配的进行路由
+            - Path=/payment/get/**
+        #路由的ID，没有固定规则但要求唯一，建议配合服务名
+        - id: payment_route_lb
+          #匹配后提供服务的路由地址
+          uri: http://localhost:8001
+          predicates:
+            # 路径相匹配的进行路由
+            - Path=/payment/get/lb
+# 集群版
+spring:
+  application:
+    name: cloud-gateway
+  cloud:
+    # gateway 网关配置
+    gateway:
+      discovery:
+        locator:
+          #开启从注册中心动态创建路由的功能，利用微服务名进行路由
+          enabled: true
+      routes:
+        #路由的ID，没有固定规则但要求唯一，建议配合服务名
+        - id: payment_route
+          #匹配后提供服务的路由地址 #集群服务路由地址
+          uri: lb://cloud-payment-service
+          #断言
+          predicates:
+            # 路径相匹配的进行路由
+            - Path=/payment/get/**
+        #路由的ID，没有固定规则但要求唯一，建议配合服务名
+        - id: payment_route_lb
+          #匹配后提供服务的路由地址 #集群服务路由地址
+          uri: lb://cloud-payment-service
+          predicates:
+            # 路径相匹配的进行路由
+            - Path=/payment/get/lb
+            # 时间在此之后的进行路由 日期可以使用 ZonedDateTime.now();
+            - After=2020-08-29T16:47:09.015+08:00[Asia/Shanghai]
+            # 时间在此之前的进行路由 日期可以使用 ZonedDateTime.now();
+            - Before=2020-08-29T16:47:09.015+08:00[Asia/Shanghai]
+            # 时间在此之间的进行路由 日期可以使用 ZonedDateTime.now();
+            - Between=2020-08-29T16:47:09.015+08:00[Asia/Shanghai],2020-08-29T16:47:09.015+08:00[Asia/Shanghai]
+            # cookie 包含 key=key，value 匹配正则表达式 aa 的进行路由
+            - Cookie=key, aa
+            # header 包含 key=X-Request-Id，value 匹配正则表达式 \d+ 的进行路由
+            - Header=X-Request-Id, \d+
+            # host 匹配的进行路由
+            - Host=**.somehost.org,**.anotherhost.org
+            # 请求方法为 Get/Post 的进行路由
+            - Method=GET,POST
+            # remoteAddr 匹配的进行路由
+            - RemoteAddr=192.168.1.1/24
+
+eureka:
+  instance:
+    hostname: localhost
+    #所在主机ip
+    ip-address: 127.0.0.1
+    #将自己的ip地址注册到Eureka服务中
+    prefer-ip-address: true
+    #指定实例id
+    instance-id: ${spring.application.name}:${server.port}
+    #eureka客户端向服务端发送心跳时间间隔，默认30s
+    lease-renewal-interval-in-seconds: 30
+    #eureka服务端在收到最后一次心跳后的等待时间，超时将删除服务，90s
+    lease-expiration-duration-in-seconds: 90
+  client:
+    # 表示是否注册进eureka,默认为true
+    register-with-eureka: true
+    # 表示是否从EurekaServer抓取已有注册信息，默认为true，单节点无所谓，集群必须设置为true才能配合ribbon使用负载均衡
+    fetch-registry: true
+    service-url:
+      defaultZone: http://127.0.0.1:7001/eureka,http://127.0.0.1:7002/eureka
+```
+
+###### 12.5.1 Gateway 代码配置断言方式
+  Gateway 网关模块启动时，在 Console 工作台能够观察到 Gateway 去加载 Predicate。我们会看到 Gateway 一共提供了 11 种 Predicate 机制(xxxFactory、xxxService 2个除外)。
+```java
+@Configuration
+public class GatewayConfig {
+    @Bean
+    public RouteLocator routes(RouteLocatorBuilder builder) {
+        return builder.routes()
+                .route("toBaiduGuoNei", r -> r.path("/guonei").uri("https://news.baidu.com/guonei"))
+                .build();
+    }
+}
+```
+###### 12.5.2 Gateway 代码配置自定义过滤器方式
+  自定义全局过滤器，可以帮助我们进行 全局日志记录、统一网关鉴权 等功能。我们需要定义一个类，并实现 GlobalFilter ，Ordered 两个接口，重写里面的 filter、order 方法即可。
+  主要是 filter 方法，编写详细的过滤器逻辑；order 方法是用来定义加载过滤器的优先级，返回一个 int 数值，值越小优先级越高。
+
+```java
+@Slf4j
+@Component
+public class GatewayFilter implements GlobalFilter, Ordered {
+
+    @Override
+    public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
+        log.info("*********come in MyLogGateWayFilter: "+new Date());
+        log.info("*********进入全局过滤器： "+new Date());
+        String username = exchange.getRequest().getQueryParams().getFirst("username");
+        if (StringUtils.isEmpty(username)) {
+            log.info("*****用户名为Null 非法用户,(┬＿┬)");
+            //给人家一个回应，设置http状态码
+            exchange.getResponse()
+                    .setStatusCode(HttpStatus.NOT_ACCEPTABLE);
+            return exchange.getResponse().setComplete();
+        }
+        return chain.filter(exchange);
+    }
+
+    @Override
+    public int getOrder() {
+        //加载过滤器优先级，越小优先级越高
+        return 0;
+    }
+}
+```
 
 #### 13. SpringCloud config 分布式配置中心
-&emsp; xxxxxxxxxxxxxxxxxxx
+  Spring Cloud Config 为[wèi]微服务架构中的微服务 **`提供集中化的外部配置支持`**，配置服务器为[wèi]各个不同微服务应用的所有环境 **`提供了一个中心化的外部配置`**。公共配置都去配置中心读取，私有配置，各个服务独自配置，简直不要太爽
+##### 13.1 SpringCloud config 是什么
+  Spring Cloud Config 分为 服务端 和 客户端。
++ 服务端：也称为 分布式配置中心，它是一个独立的微服务应用，用来连接配置服务器并为客户端提供获取配置信息，加密/解密信息等访问接口。就是图中的 Config Server；
++ 客户端：通过指定的 配置中心(Config Server) 来管理应用资源，以及与业务相关的配置内容，并在启动的时候从 配置中心 获取和加载配置信息。
+
+  服务器默认采用 Git 来存储配置信息，这样就有助于对环境配置进行版本管理，并且可以通过 Git 客户端工具来方便的管理和访问配置内容。(服务器也支持其他方式：支持SVN 和 本地文件，最推荐 Git，而且使用的是 http/https 访问的形式)
+##### 13.2 SpringCloud config 结构图
+![config1](https://gitee.com/clownfish7/image/raw/master/springcloud-config/config1.png 'config1')
+![config2](https://gitee.com/clownfish7/image/raw/master/springcloud-config/config2.png 'config2')
+##### 13.3 SpringCloud config 服务端配置
+**`在远程仓库(github/gitee/svn)先创建好对应目录及配置文件`**
+```yml
+#/springcloud-config/config-dev.yml
+config:
+  info: "master branch, springcloud-config/config-dev.yml, version=1"
+#/springcloud-config/config-prod.yml
+config:
+  info: "master branch, springcloud-config/config-prod.yml, version=1"
+#/springcloud-config/config-test.yml
+config:
+  info: "master branch, springcloud-config/config-test.yml, version=1"
+```
+  pom.xml
+```xml
+<dependency>
+    <groupId>org.springframework.cloud</groupId>
+    <artifactId>spring-cloud-config-server</artifactId>
+</dependency>
+<dependency>
+    <groupId>org.springframework.cloud</groupId>
+    <artifactId>spring-cloud-starter-netflix-eureka-client</artifactId>
+</dependency>
+```
+  启动类注解
+```java
+@EnableConfigServer
+@SpringBootApplication
+public class ConfigCenter3344Application {
+    public static void main(String[] args) {
+        SpringApplication.run(ConfigCenter3344Application.class, args);
+    }
+}
+```
+  application.yml
+```yml
+server:
+  port: 3344
+spring:
+  application:
+    name: cloud-config-center
+  cloud:
+    config:
+      server:
+        git:
+          #GitHub远程仓库地址
+          uri: https://gitee.com/clownfish7/springcloud2020.git
+          # 搜索目录
+          search-paths: springcloud-config
+      #读取分支
+      label: master
+eureka:
+  instance:
+    hostname: localhost
+    #所在主机ip
+    ip-address: 127.0.0.1
+    #将自己的ip地址注册到Eureka服务中
+    prefer-ip-address: true
+    #指定实例id
+    instance-id: ${spring.application.name}:${server.port}
+    #eureka客户端向服务端发送心跳时间间隔，默认30s
+    lease-renewal-interval-in-seconds: 30
+    #eureka服务端在收到最后一次心跳后的等待时间，超时将删除服务，90s
+    lease-expiration-duration-in-seconds: 90
+  client:
+    # 表示是否注册进eureka,默认为true
+    register-with-eureka: true
+    # 表示是否从EurekaServer抓取已有注册信息，默认为true，单节点无所谓，集群必须设置为true才能配合ribbon使用负载均衡
+    fetch-registry: true
+    service-url:
+      defaultZone: http://127.0.0.1:7001/eureka,http://127.0.0.1:7002/eureka
+```
+  启动 Config 模块后，测试通过 Config 微服务是否可以从 远程仓库上获取配置内容。我们通过地址：http://localhost:3344/config-dev.yml 进行配置内容的访问。
+```yml
+# response
+config:
+  info: master branch, springcloud-config/config-dev.yml, version=1
+```
+##### 13.4 GitHub/Gitee 配置文件读取规则
+   远程 GitHub 仓库，配置文件的命名也是有具体规则的。Spring Cloud Config 官方共支持 5 种方式的配置。5种配置规则见：[Config 官网配置规则](https://cloud.spring.io/spring-cloud-static/spring-cloud-config/2.2.1.RELEASE/reference/html/#_quick_start, 'Config 官网配置规则')
++ /{application}/{profile}/{label}
++ /{application}-{profile}.yml (这种不带label方式，默认使用 application.yml 配置)
++ /{label}/{application}-{profile}.yml (推荐使用第三种)
++ /{application}-{profile}.properties
++ /{label}/{application}-{profile}.properties
+  规则说明:
+1. /{application}/{profile}/{label} 这种方式，返回的是 Json 对象，需要自己解析所要的内容；
+2. /{application}-{profile}.yml 这种不带 label 方式，因为 applicaiton.yml 文件已经有配置过 label，不带label 方式，默认走的就是 yml 配置的 label，返回的是配置内容；
+3. /{label}/{application}-{profile}.yml **`推荐使用第3种`**，这种方式简明扼要，条理清晰，返回的是配置内容；
+4. {application}-{profile}.properties 同第2种；
+5. {label}/{application}-{profile}.properties 同第3种。
+  参数说明:
+1. label：GitHub 分支(branch)名称
+2. application：服务名
+3. profile：环境(dev/test/prod)
+##### 13.4 SpringCloud config 客户端配置
+  客服端：在启动的时候从 配置中心(Config Server) 获取和加载配置信息。
+
+  pom.xml
+```xml
+<dependency>
+    <groupId>org.springframework.cloud</groupId>
+    <artifactId>spring-cloud-config</artifactId>
+</dependency>
+<dependency>
+    <groupId>org.springframework.cloud</groupId>
+    <artifactId>spring-cloud-starter-netflix-eureka-client</artifactId>
+</dependency>
+```
+  启动类注解
+```java
+@EnableDiscoveryClient
+@SpringBootApplication
+public class ConfigClient3355Application {
+    public static void main(String[] args) {
+        SpringApplication.run(ConfigClient3355Application.class, args);
+    }
+}
+```
+  配置文件 **`bootstrap.yml`**  
+  application.yml 是(用户级)的资源配置项。bootstrap.yml 是(系统级)的资源配置项，优先级更高。
+
+  Spring Cloud 会创建一个 “Bootstrap Context”，作为 Spring 应用的 “Application Context” 的 父上下文。初始化的时候，“Bootstrap Context” 负责从 外部源 加载配置属性并解析配置。这两个上下文共享一个从外部获取的 “Environment”。
+
+  "Bootstrap" 属性有高优先级。默认情况下，它们不会被本地配置覆盖。 “Bootstrap Context” 和 “Application Context” 有这不同的约定，所以新增了一个 "bootstrap.yml" 文件，保证"Bootstrap Context" 和 "Application Context" 配置的分离。
+
+  所以，将客户端模块下的 application.yml 文件改为bootstrap.yml，这是很关键的。 因为 bootstrap.yml 是比 application.yml 优先加载的。bootstrap.yml 优先级高于 applicaiton.yml。
+```yml
+server:
+  port: 3355
+spring:
+  application:
+    name: cloud-config-client
+  cloud:
+    #config客户端配置
+    config:
+      #分支名称
+      label: master
+      #配置文件名称
+      name: config
+      # 读取后缀名称 3个综合：master分支上config-dev.yml 的配置文件被读取(http://config-3344.com:3344/master/config-dev.yml)
+      profile: dev
+      uri: http://cloud-config-center   #配置中心地址 http://host:port
+      discovery:
+        # 开启从注册中心发现 config-server
+        enabled: true
+        # config-server name
+        service-id: cloud-config-center
+eureka:
+  instance:
+    hostname: localhost
+    #所在主机ip
+    ip-address: 127.0.0.1
+    #将自己的ip地址注册到Eureka服务中
+    prefer-ip-address: true
+    #指定实例id
+    instance-id: ${spring.application.name}:${server.port}
+    #eureka客户端向服务端发送心跳时间间隔，默认30s
+    lease-renewal-interval-in-seconds: 30
+    #eureka服务端在收到最后一次心跳后的等待时间，超时将删除服务，90s
+    lease-expiration-duration-in-seconds: 90
+  client:
+    # 表示是否注册进eureka,默认为true
+    register-with-eureka: true
+    # 表示是否从EurekaServer抓取已有注册信息，默认为true，单节点无所谓，集群必须设置为true才能配合ribbon使用负载均衡
+    fetch-registry: true
+    service-url:
+      defaultZone: http://127.0.0.1:7001/eureka,http://127.0.0.1:7002/eureka
+```
+  配置一个 Controller 便于查看结果
+```java
+@RestController
+public class ConfigClientController {
+    @Value("${config.info}")
+    private String configInfo;
+    @GetMapping("/config/info")
+    public String configInfo() {
+        return configInfo;
+    }
+}
+```
+  启动 Config-Client 模块后，测试通过 Config 微服务是否可以从 远程仓库上获取配置内容。我们通过地址：http://localhost:3355/config/info 进行配置内容的访问。  
+  response: master branch, springcloud-config/config-dev.yml, version=1
+##### 13.5 配置的动态刷新问题
+  当 GitHub 上的配置文件内容有调整，Github中配置变更后，ConfigServer 配置中心会立刻响应，然鹅客户端却没有任何响应，除非客户端重启或者重新加载，才能够获取最新的配置。 难道每次修改配置文件，客户端都需要重启吗？？
+
+  那简直就是个噩梦，还是没有解决根本问题。为了避免每次修改 GitHub 配置文件后，客户端都需要重启的问题，此处就引出了客户端 动态刷新 的问题。
+
+接下来对客户端进行 动态刷新 配置。
+
+  pom.xml 引入actuator监控
+```xml
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-actuator</artifactId>
+</dependency>
+```
+  bootstrap.yml，新增暴露监控端口配置
+```yml
+#暴露监控端点
+management:
+  endpoints:
+    web:
+      exposure:
+        # 此处有很多选项可以配置，直接配置 * 代表包含全部
+        include: "*"
+```
+  Controller层添加 @RefreshScope 注解  
+  @RefreshScope  注解能帮助我们做局部的参数刷新，但侵入性较强，需要开发阶段提前预知可能的刷新点，
+并且该注解底层是依赖于cglib进行代理的，所以不要掉入cglib的坑，出现刷了也不更新情况；
+```java
+@RefreshScope
+@RestController
+public class ConfigClientController {
+    @Value("${config.info}")
+    private String configInfo;
+    @GetMapping("/config/info")
+    public String configInfo() {
+        return configInfo;
+    }
+}
+```
+  修改完配置文件后，curl -X POST http://localhost:3355/actuator/refresh 刷新配置（**POST**）
+##### 13.6 手动版动态刷新，存在的问题
+  实现了动态刷新，解决了 ConfigClient 重启才能获取最新配置信息问题。假如有 N 多个台，就需要 N 多次的 curl -X POST "http://微服务地址:端口号/actuator/refresh"。这仍然是一个噩梦，还是没有解决根本问题。
+
+  大规模 微服务/集群模式，我们可以采用广播的方式，一次通知，处处生效。类似于 消息队列的 Topic ，微信公众号 的概念，一次订阅，所有订阅者都能接收到新消息。
+
+  他来了，他来了，Spring Cloud Bus 总线 带着 消息队列/广播 机制 向我们走来了。Spring Cloud Bus 总线 可以帮我们实现以下功能：
+
+1. 真正实现：一处通知、处处生效；
+2. 实现精确通知,只通知集群中的某些服务(精确通知，比如有100台机器，只通知前98台)
 
 #### 14. SpringCloud Bus 消息总线
-&emsp; xxxxxxxxxxxxxxxxxxx
+  官网：[Spring Cloud Bus 官网](https://cloud.spring.io/spring-cloud-static/spring-cloud-bus/2.2.1.RELEASE/reference/html/, 'Spring Cloud Bus 官网')
+
+  在微服务架构的系统中，通常会使用 轻量级的消息代理 来构建一个共用的消息主题，并让系统中所有的微服务示例都连接上来。由于 该主题中产生的消息会被所有实例监听和消费，所以称它为消息总线。在总线上的各个实例，都可以方便的广播一些需要让其他连接在该主题上的实例都知道的消息。
+
+  Spring Cloud Bus 是用来将 分布式系统的节点与 轻量级消息系统连接起来的框架，它整合了 Java 的事件处理机制和消息中间件的功能。Spring Cloud Bus 目前仅支持 `RabbitMQ` 和 `Kafka`。
+##### 14.1 SpringCloud Bus 原理
+  Config 客户端示例，都去监听 MQ 中的同一个 topic（默认是 springCloudBus）。当一个服务刷新数据的时候，它会把这个消息放入到 Topic 中，这样其他监听同一 Topic 的服务就能够得到通知，然后去更新自身的配置。就是通过 MQ 消息队列的 Topic 机制，达到广播的效果。
+![bus1](https://gitee.com/clownfish7/image/raw/master/springcloud-bus/bus1.png 'bus1')
+##### 14.2 SpringCloud Bus 的两种设计思想
+  选用 Spring Cloud Bus 进行 Topic 消息的发送，在技术选型上共有两种设计思想：
+###### 触发客户端
+  利用消息总线，触发一个客户端 的 /bus/refresh 端点。通过客户端向 Bus 总线发送消息，实现刷新所有客户端的配置。
+![bus2](https://gitee.com/clownfish7/image/raw/master/springcloud-bus/bus2.png 'bus2')
+###### 触发服务端
+  利用消息总线，触发一个服务端 的 /bus/refresh 端点。通过Config Server 服务端向 Bus 总线发送消息，实现刷新所有客户端的配置。
+![bus3](https://gitee.com/clownfish7/image/raw/master/springcloud-bus/bus3.png 'bus3')
+###### 如何选型
+  根据架构图显然 图二 更加合适，所以推荐使用 触发服务端 Config Server 的方式。图一触发客户端方式 不适合的原因如下：
+1. 利用消息总线触发客户端方式，打破了微服务的职责单一性，因为微服务本身是业务模块，它本不应该承担配置刷新的职责；
+2. 触发客户端方式，破坏了微服务各个节点之间的对等性（比如说：3355/3366/3377 集群方式提供服务，此时 3355 还需要消息通知，影响节点的对等性）
+3. 有一定的局限性。当微服务迁移时，网络地址会经常发生变化，如果此时需要做到自动刷新，则会增加更多的修改。
+
+##### 14.3 SpringCloud Bus 动态刷新全局广播配置
+  pom.xml 在服务端配置中心 Config Server、客户端集群 中引入 Bus 总线依赖
+```xml
+<dependency>
+    <groupId>org.springframework.cloud</groupId>
+    <artifactId>spring-cloud-starter-bus-amqp</artifactId>
+</dependency>
+```
+  yml 配置 rabbitmq 和暴露 refresh 端点
+```yml
+spring:
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: username
+    password: password
+    virtual-host: /
+# 服务端
+management:
+  endpoints:
+    web:
+      exposure:
+        #为什么配置 bus-refresh，看工作原理图
+        include: 'bus-refresh'
+```
+  向 服务端 发送 Post 请求，命令：curl -X POST "http://localhost:3344/actuator/bus-refresh"  
+  当向 Config Server 发送 Post 请求后，总线上的各个实例都能够及时 监听和消费 配置的变更。使用广播的方式，真正的实现 一处通知，处处生效。  
+  使用 MQ 广播的方式，实现 一处通知，处处生效 的效果。此时我们登陆 Rabbit MQ 客户端，在 Exchanges 模块，就能够看到一个叫做 springCloudBus 的 Topic。  
+  Config 客户端都去监听 MQ 中的同一个 topic（默认是 springCloudBus）。当一个服务刷新数据的时候，它会把这个消息放入到 Topic 中，这样其他监听同一 Topic 的服务就能够得到通知，然后去更新自身的配置。
+
+##### 14.4 SpringCloud Bus 动态刷新定点通知配置
+  如果需要 差异化通知，并不想进行全局广播，此时就用到了 Bus 的 定点通知 功能。
+  此处命令和全局广播有点不同，命令为：http://配置中心IP:配置中心的端口号/actuator/bus-refresh/{destination}
+  通过指定 /bus/refresh请求 不再发送到具体的服务实例上，而是发给 Config Server 并通过 {destination} 参数 来指定需要更新配置的服务或实例。
+
+  **{destination}** 参数 = **微服务名** :**端口号**。
 
 #### 15. SpringCloud Stream 消息驱动
-&emsp; xxxxxxxxxxxxxxxxxxx
+  官网：[SpringCloud Stream 官网](https://spring.io/projects/spring-cloud-stream#overview 'SpringCloud Stream 官网')  
+
+  Spring Cloud Stream 是一个 构建消息驱动微服务的框架。应用程序通过 inputs 或者 outputs 来与 Spring Cloud Stream 中的 binder 对象交互。通过我们的配置来进行 binding(绑定)， 然后 Spring Cloud Stream 通过 binder 对象与消息中间件交互。所以，我们只需要搞清楚如何与 Spring Cloud Stream 交互，就可以方便使用消息驱动的方式。
+
+  Spring Cloud Stream 通过使用 Spring Integration 来连接消息代理中间件，以实现消息时间驱动。Spring Cloud Stream 为一些供应商的消息中间件产品提供了个性化的自动配置发现，引用了 发布-订阅、消费组、分区 三个核心概念。目前仅支持 **RabbitMQ**、**Kafka**。
+
+  **一句话总结**： Spring Cloud Stream 屏蔽了底层消息中间件的差异，降低 MQ 切换成本，统一消息的编程模型。开发中使用的就是各种 **xxxBinder**。
+##### 15.1 标准MQ 和 Spring Cloud Stream 对比
+######  标准 MQ 结构图
+  生产者/消费者 之间通过 消息媒介 传递消息内容
+![stream1](https://gitee.com/clownfish7/image/raw/master/springcloud-stream/stream1.png 'stream1')
+
+######  Spring Cloud Stream 结构图
+  比如说我们用到了 RabbitMQ 和 Kafka，由于这两个消息中间件的架构上的不同。像 RabbitMQ 有 `exchange`，Kafka 有` Topic` 和 `Partions` 分区的概念。
+  这些中间件的差异性，给我们实际项目的开发造成了一定的困扰。我们如果用了两个消息队列中的其中一个，后面的业务需求如果向往另外一种消息队列进行迁移，这需求简直是灾难性的。因为它们之间的耦合性过高，导致一大堆东西都要重新推到来做，这时候 Spring Cloud Stream 无疑是一个好的选择，它为我们提供了一种解耦合的方式。
+
+![stream2](https://gitee.com/clownfish7/image/raw/master/springcloud-stream/stream2.png 'stream2')
+
+##### 15.3 Spring Cloud Stream 如何统一底层差异
+  在没有绑定器这个概念的情况下，我们的 Spring Boot 应用直接与消息中间件进行信息交互时，由于个消息中间件构建的初衷不同，它们的实现细节上会有较大的差异性。
+
+  通过定义绑定器(Binder)作为中间层，就可以完美的实现应用程序与消息中间件细节的隔离。 通过向应用程序暴露统一的 Channel 通道，使得应用程序不需要在考虑各种不同的消息中间件的实现。
+
+![stream3](https://gitee.com/clownfish7/image/raw/master/springcloud-stream/stream3.png 'stream3')
+
+  默认情况下，RabbitMQ Binder 实现 将每个目标映射到TopicExchange。 对于每个使用者组，队列都绑定到该 TopicExchange。 每个使用者实例在其组的队列中都有一个对应的 RabbitMQ使用者实例。 对于分区的生产者和使用者，队列以分区索引为后缀，并使用分区索引作为路由键。 对于匿名使用者（没有组属性的使用者），将使用自动删除队列（具有随机的唯一名称）。
+##### 15.4 Spring Cloud Stream 执行流程
+![stream4](https://gitee.com/clownfish7/image/raw/master/springcloud-stream/stream4.png 'stream4')
+**说明：**
+1. Source/Sink：Source 输入消息，Sink 输出消息
+2. Channel：通道，是队列 Queue 的一种抽象，在消息通讯系统中就是实现存储和转发的媒介，通过Channel 对队列进行配置；
+3. Binder：很方便的 连接中间件，屏蔽 MQ 之间的差异
+##### 15.5 Spring Cloud Stream 编码API和常用注解
+![stream5](https://gitee.com/clownfish7/image/raw/master/springcloud-stream/stream4.png 'stream5')
+##### 15.6 Spring Cloud Stream 配置使用  
+  本示例选用 RabbitMQ，在不需要任何 RabbitMQ 包依赖的基础上，使用 Spring Cloud Stream 消息驱动来实现消息的发送&接收。
+###### 生产者配置
+###### 消费者配置
+##### 15.7 Spring Cloud Stream 重复消费/持久化问题
+###### 重复消费问题
+###### 持久化问题
 
 #### 16. SpringCloud Sleuth 分布式请求链路追踪
-&emsp; xxxxxxxxxxxxxxxxxxx
+官网：[SpringCloud Sleuth 官网](https://spring.io/projects/spring-cloud-sleuth#overview SpringCloud Sleuth 官网)
+
+  在微服务框架中，一个由客户端发起的请求，在后端系统中会经过多个不同的微服务节点调用，协同操作产生最后的请求结果。每一个前端请求都会形成一条复杂的分布式服务调用链路，链路中的任何一环出现 高延时 或者 错误，都会引起整个请求最后的失败。  
+
+> Spring Cloud Sleuth 提供了分布式系统中一套完整的服务跟踪的解决方案，并且兼容支持了zipkin，完美的解决了多个微服务之间链路调用的问题。  
+
+**一句话总结**： 就是用来处理服务之间调用关系的。
+##### 16.1 SpringCloud Sleuth 调用结构图
+![sleuth1](https://gitee.com/clownfish7/image/raw/master/springcloud-sleuth/sleuth1.png 'sleuth1')
+##### 16.2 SpringCloud Sleuth 环境准备
+  Zipkin 是 Twitter 的一个开源项目，允许开发者收集 Twitter 各个服务上的监控数据，并提供查询接口。
+  我们需要先准备一个 Zipkin 环境。Spring Cloud 从F版起已不需要自己构建 Zipkin server了，只需要调用jar包即可。当前使用版本为 H版。我们只需要下载 Zipkin jar包，使用 java -jar xxx的方式启动即可。
+  点击链接：https://dl.bintray.com/openzipkin/maven/io/zipkin/java/zipkin-server ，下载 zipkin-server-2.12.9-exec.jar 。启动就OK了。
+  通过 http://loclahost:9411 就能进入到 Zipkin 为我们提供的可视化界面。
+##### 16.3 SpringCloud Sleuth 配置使用
+  pom.xml
+```xml
+<!--包含了sleuth+zipkin-->
+<dependency>
+    <groupId>org.springframework.cloud</groupId>
+    <artifactId>spring-cloud-starter-zipkin</artifactId>
+</dependency>
+```
+  applicaiton.yml
+```yml
+spring:
+  zipkin:
+    #监控数据要打到 9411 zipkin 上
+    base-url: http://localhost:9411
+  sleuth:
+    sampler:
+      #采样率值介于0到1，1则表示全部采集
+      probability: 1
+```
+  我们打开 http://localhost:9411 Zipkin 控制台就可以看到具体服务调用情况。
+  点击相对应请求，还可以看到 模块间调用情况、调用耗时 等更详细的信息。点击导航栏中的 依赖 项，还可以查看模块(调用、被调用)的依赖关系等，链路调用关系一目了然。
+  
 
 #### 17. SpringCloud Alibaba 入门简介
-&emsp; xxxxxxxxxxxxxxxxxxx
+  xxxxxxxxxxxxxxxxxxx
 
 #### 18. SpringCloud Alibaba Nacos 服务注册和配置中心
-&emsp; xxxxxxxxxxxxxxxxxxx
+  xxxxxxxxxxxxxxxxxxx
 
 #### 19. SpringCloud Alibaba Sentinel 熔断与限流
-&emsp; xxxxxxxxxxxxxxxxxxx
+  xxxxxxxxxxxxxxxxxxx
 
 #### 20. SpringCloud Alibaba Seata 处理分布式事务
-&emsp; xxxxxxxxxxxxxxxxxxx
+  xxxxxxxxxxxxxxxxxxx
