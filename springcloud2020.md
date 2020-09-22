@@ -229,7 +229,7 @@ zookeeper是一个分布式协调工具，可以实现注册中心功能，zooke
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-actuator</artifactId>
-        </dependency
+        </dependency>
     </dependencies>
 </project>
 ```
@@ -326,7 +326,7 @@ consul 提供以下功能：
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-actuator</artifactId>
-        </dependency
+        </dependency>
     </dependencies>
 </project>
 ```
