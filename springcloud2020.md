@@ -1746,15 +1746,234 @@ management:
 2. Channel：通道，是队列 Queue 的一种抽象，在消息通讯系统中就是实现存储和转发的媒介，通过Channel 对队列进行配置；
 3. Binder：很方便的 连接中间件，屏蔽 MQ 之间的差异
 ##### 15.5 Spring Cloud Stream 编码API和常用注解
-![stream5](https://gitee.com/clownfish7/image/raw/master/springcloud-stream/stream4.png 'stream5')
+![stream5](https://gitee.com/clownfish7/image/raw/master/springcloud-stream/stream5.png 'stream5')
 ##### 15.6 Spring Cloud Stream 配置使用  
   本示例选用 RabbitMQ，在不需要任何 RabbitMQ 包依赖的基础上，使用 Spring Cloud Stream 消息驱动来实现消息的发送&接收。
 ###### 生产者配置
+  pom.xml
+```xml
+<dependency>
+    <groupId>org.springframework.cloud</groupId>
+    <artifactId>spring-cloud-starter-stream-rabbit</artifactId>
+</dependency>
+```
+  application.yml
+```yaml
+server:
+  port: 8801
+
+spring:
+  application:
+    name: cloud-stream-provider
+  cloud:
+    stream:
+      # 在此处配置要绑定的rabbitmq的服务信息；
+      binders:
+        defaultRabbit: # 表示定义的名称，用于binding整合(可以自定义名称)
+          type: rabbit # 消息组件类型
+          environment: # 设置rabbitmq的相关的环境配置
+            spring:
+              rabbitmq:
+                host: localhost
+                port: 5672
+                username: guest
+                password: guest
+      # 服务的整合处理
+      bindings:
+        output: # 这个名字是一个通道的名称
+          # 表示要使用的Exchange名称定义
+          destination: studyExchange
+          # 设置消息类型，本次为json，文本则设置“text/plain”
+          content-type: application/json
+          default-binder: defaultRabbit
+          # 设置要绑定的消息服务的具体设置(需与自定义名称一致)
+          # (飘红：Settings->Editor->Inspections->Spring->Spring Boot->Spring Boot application.yml 对勾去掉)
+          binder: defaultRabbit
+eureka:
+  instance:
+    hostname: localhost
+    #所在主机ip
+    ip-address: 127.0.0.1
+    #将自己的ip地址注册到Eureka服务中
+    prefer-ip-address: true
+    #指定实例id
+    instance-id: ${spring.application.name}:${server.port}
+    #eureka客户端向服务端发送心跳时间间隔，默认30s
+    lease-renewal-interval-in-seconds: 30
+    #eureka服务端在收到最后一次心跳后的等待时间，超时将删除服务，90s
+    lease-expiration-duration-in-seconds: 90
+  client:
+    # 表示是否注册进eureka,默认为true
+    register-with-eureka: true
+    # 表示是否从EurekaServer抓取已有注册信息，默认为true，单节点无所谓，集群必须设置为true才能配合ribbon使用负载均衡
+    fetch-registry: true
+    service-url:
+      defaultZone: http://127.0.0.1:7001/eureka,http://127.0.0.1:7002/eureka
+```
+  provider
+```java
+public interface IMessageProvider {
+    public String send();
+}
+/**
+ * @author You
+ * @create 2020-08-29 22:19
+ * @EnableBinding 已包含 @Configuration -> 包含 @Component
+ */
+@EnableBinding(Source.class)
+public class MessageProviderImpl implements IMessageProvider {
+
+    @Autowired
+    private MessageChannel output;
+
+    @Override
+    public String send() {
+        output.send(MessageBuilder.withPayload(UUID.randomUUID().toString()).build());
+        return "ok";
+    }
+}
+```
 ###### 消费者配置
+  pom.xml
+```xml
+<dependency>
+    <groupId>org.springframework.cloud</groupId>
+    <artifactId>spring-cloud-starter-stream-rabbit</artifactId>
+</dependency>
+```
+  application.yml
+```yaml
+server:
+  port: 8802
+
+spring:
+  application:
+    name: cloud-stream-consumer
+  cloud:
+    stream:
+      # 在此处配置要绑定的rabbitmq的服务信息；
+      binders:
+        defaultRabbit: # 表示定义的名称，用于binding整合(可以自定义名称)
+          type: rabbit # 消息组件类型
+          environment: # 设置rabbitmq的相关的环境配置
+            spring:
+              rabbitmq:
+                host: localhost
+                port: 5672
+                username: guest
+                password: guest
+      # 服务的整合处理
+      bindings:
+        input: # 这个名字是一个通道的名称
+          # 表示要使用的Exchange名称定义
+          destination: studyExchange
+          # 设置消息类型，本次为json，文本则设置“text/plain”
+          content-type: application/json
+          default-binder: defaultRabbit
+          # 设置要绑定的消息服务的具体设置(需与自定义名称一致)
+          # (飘红：Settings->Editor->Inspections->Spring->Spring Boot->Spring Boot application.yml 对勾去掉)
+          binder: defaultRabbit
+
+eureka:
+  instance:
+    hostname: localhost
+    #所在主机ip
+    ip-address: 127.0.0.1
+    #将自己的ip地址注册到Eureka服务中
+    prefer-ip-address: true
+    #指定实例id
+    instance-id: ${spring.application.name}:${server.port}
+    #eureka客户端向服务端发送心跳时间间隔，默认30s
+    lease-renewal-interval-in-seconds: 30
+    #eureka服务端在收到最后一次心跳后的等待时间，超时将删除服务，90s
+    lease-expiration-duration-in-seconds: 90
+  client:
+    # 表示是否注册进eureka,默认为true
+    register-with-eureka: true
+    # 表示是否从EurekaServer抓取已有注册信息，默认为true，单节点无所谓，集群必须设置为true才能配合ribbon使用负载均衡
+    fetch-registry: true
+    service-url:
+      defaultZone: http://127.0.0.1:7001/eureka,http://127.0.0.1:7002/eureka
+```
+  provider
+```java
+/**
+ * @author You
+ * @create 2020-08-30 16:56
+ * @EnableBinding 已包含 @Configuration -> 包含 @Component
+ */
+@EnableBinding(Sink.class)
+public class MessageListener {
+
+    @StreamListener(Sink.INPUT)
+    public void input(Message<String> message) {
+        System.out.println(message.getPayload());
+    }
+
+}
+```
 ##### 15.7 Spring Cloud Stream 重复消费/持久化问题
 ###### 重复消费问题
-###### 持久化问题
+  当集群方式进行消息消费时，就会存在 消息的重复消费问题。比如订单库存相关消息，购物完成库存 -1，消息重复消费就会导致库存不准确问题出现，这显然是不能接受的。
+  这是因为没有进行分组的原因，不同组就会出现重复消费；同一组内会发生竞争关系，只有一个可以消费。 如果我们不指定(8802、8803)集群分组信息，它会默认将其当做两个分组来对待。这个时候，如果发送一条消息到 MQ，不同的组就都会收到消息，就会造成消息的重复消费。
+  解决方式很简单，只需要用到 Stream 当中 group 属性对消息进行分组即可。将8802、8803分到一个组即可。
+```yaml
+server:
+  port: 8802
 
+spring:
+  application:
+    name: cloud-stream-consumer
+  cloud:
+    stream:
+      # 在此处配置要绑定的rabbitmq的服务信息；
+      binders:
+        defaultRabbit: # 表示定义的名称，用于binding整合(可以自定义名称)
+          type: rabbit # 消息组件类型
+          environment: # 设置rabbitmq的相关的环境配置
+            spring:
+              rabbitmq:
+                host: localhost
+                port: 5672
+                username: guest
+                password: guest
+      # 服务的整合处理
+      bindings:
+        input: # 这个名字是一个通道的名称
+          # 表示要使用的Exchange名称定义
+          destination: studyExchange
+          # 设置消息类型，本次为json，文本则设置“text/plain”
+          content-type: application/json
+          default-binder: defaultRabbit
+          # 设置要绑定的消息服务的具体设置(需与自定义名称一致)
+          # (飘红：Settings->Editor->Inspections->Spring->Spring Boot->Spring Boot application.yml 对勾去掉)
+          binder: defaultRabbit
+          # 分组
+          group: group1
+
+eureka:
+  instance:
+    hostname: localhost
+    #所在主机ip
+    ip-address: 127.0.0.1
+    #将自己的ip地址注册到Eureka服务中
+    prefer-ip-address: true
+    #指定实例id
+    instance-id: ${spring.application.name}:${server.port}
+    #eureka客户端向服务端发送心跳时间间隔，默认30s
+    lease-renewal-interval-in-seconds: 30
+    #eureka服务端在收到最后一次心跳后的等待时间，超时将删除服务，90s
+    lease-expiration-duration-in-seconds: 90
+  client:
+    # 表示是否注册进eureka,默认为true
+    register-with-eureka: true
+    # 表示是否从EurekaServer抓取已有注册信息，默认为true，单节点无所谓，集群必须设置为true才能配合ribbon使用负载均衡
+    fetch-registry: true
+    service-url:
+      defaultZone: http://127.0.0.1:7001/eureka,http://127.0.0.1:7002/eureka
+```
+###### 持久化问题
+  还是很简单，还是加一个 group 分组属性就行了。所以说 group 分组属性在消息重复消费和消息持久化消费(避免消息丢失)是一个非常重要的属性，推荐你在使用时加上。
 #### 16. SpringCloud Sleuth 分布式请求链路追踪
 官网：[SpringCloud Sleuth 官网](https://spring.io/projects/spring-cloud-sleuth#overview SpringCloud Sleuth 官网)
 
@@ -1795,13 +2014,89 @@ spring:
   
 
 #### 17. SpringCloud Alibaba 入门简介
-  xxxxxxxxxxxxxxxxxxx
+  官方文档：
++ [Spring Cloud Alibaba官网]('https://spring.io/projects/spring-cloud-alibaba#overview' Spring Cloud Alibaba官网)
++ [Github英文文档]('https://github.com/alibaba/spring-cloud-alibaba' Github英文文档)
++ [Spring英文文档]('https://spring-cloud-alibaba-group.github.io/github-pages/greenwich/spring-cloud-alibaba.html' Spring英文文档)
++ [Github中文文档]('https://github.com/alibaba/spring-cloud-alibaba/blob/master/README-zh.md' Github中文文档)
 
+##### 17.1 维护模式
+  随着 Spring Cloud Netflix 项目进入维护模式（Maintenance Mode），Eureka、Hystrix、Ribbon、Zuul 等项目都进入了维护模式。
+>将模块置于 维护模式 意味着 Spring Cloud 团队将不再向该模块添加新功能。我们将修复 block 级别的 bug 和安全性问题，还将考虑并审查社区中的小请求。自 Spring Cloud Greenwich 版本发行(2018.12.12)以来，Spring Cloud 打算继续为这些模块提供至少一年的支持。（摘自：[官网]('https://spring.io/blog/2018/12/12/spring-cloud-greenwich-rc1-available-now' 官网)）
+
+  现在是 2020.7.20 ，Spring Cloud 已经发行 Hoxton SR6 版本。针对 Spring Cloud Netflix 相关模块已经不再提供支持。我们都知道 Spring Cloud 版本迭代算是比较快的，因而出现了很多重大 ISSUE 都还来不及 Fix 就又推出另一个 Release 版本了。进入维护模式意味着：以后一段时间 Spring Cloud Netflix 提供的服务和功能就这么多了，不再开发新的组件和功能了，这显然无法满足接下来微服务的开发要求。
+  伴随着 Spring Cloud Netflix 倒下，一手好牌打的稀巴烂，停更的组件自然就需要寻找替代者来继续下去。
+>Alibaba 为了能够在微服务领域占据一定的话语权，此时便趁虚而入，于2018.10.31 Spring Cloud Alibaba 正式入驻 Spring Cloud 官方孵化器，并在 Maven Spring Cloud for Alibaba 0.2.0 released。（附：[Spring Cloud Alibaba 官方介绍]('https://github.com/alibaba/spring-cloud-alibaba/blob/master/README-zh.md' Spring Cloud Alibaba 官方介绍) ） 
+
+  Spring Cloud Alibaba 致力于提供微服务开发的一站式解决方案。此项目包含开发分布式应用微服务的必需组件，方便开发者通过 Spring Cloud 编程模型轻松使用这些组件来开发分布式应用服务。
+  依托 Spring Cloud Alibaba，您只需要添加一些注解和少量配置，就可以将 Spring Cloud 应用接入阿里微服务解决方案，通过阿里中间件来迅速搭建分布式应用系统。
+
+##### 17.2 Spring Cloud Alibaba 主要功能
+  Spring Cloud Alibaba 致力于提供微服务开发的一站式解决方案。此项目包含开发分布式应用微服务的必需组件，方便开发者通过 Spring Cloud 编程模型轻松使用这些组件来开发分布式应用服务。
+  依托 Spring Cloud Alibaba，您只需要添加一些注解和少量配置，就可以将 Spring Cloud 应用接入阿里微服务解决方案，通过阿里中间件来迅速搭建分布式应用系统。
+1. 服务限流降级： 默认支持 WebServlet、WebFlux, OpenFeign、RestTemplate、Spring Cloud Gateway, Zuul, Dubbo 和 RocketMQ 限流降级功能的接入，可以在运行时通过控制台实时修改限流降级规则，还支持查看限流降级 Metrics 监控。
+2. 服务注册与发现： 适配 Spring Cloud 服务注册与发现标准，默认集成了 Ribbon 的支持。
+3. 分布式配置管理： 支持分布式系统中的外部化配置，配置更改时自动刷新。
+4. 消息驱动能力： 基于 Spring Cloud Stream 为微服务应用构建消息驱动能力。
+5. 分布式事务： 使用 @GlobalTransactional 注解， 高效并且对业务零侵入地解决分布式事务问题。。
+6. 阿里云对象存储： 阿里云提供的海量、安全、低成本、高可靠的云存储服务。支持在任何应用、任何时间、任何地点存储和访问任意类型的数据。
+7. 分布式任务调度： 提供秒级、精准、高可靠、高可用的定时（基于 Cron 表达式）任务调度服务。同时提供分布式的任务执行模型，如网格任务。网格任务支持海量子任务均匀分配到所有 Worker（schedulerx-client）上执行。
+8. 阿里云短信服务： 覆盖全球的短信服务，友好、高效、智能的互联化通讯能力，帮助企业迅速搭建客户触达通道。
+
+##### 17.3 Spring Cloud Alibaba 包含组件
+1. Sentinel：阿里巴巴开源产品，把流量作为切入点，从流量控制、熔断降级、系统负载保护等多个维度保护服务的稳定性。
+2. Nacos：阿里巴巴开源产品，一个更易于构建云原生应用的动态服务发现、配置管理和服务管理平台。
+3. RocketMQ：Apache RocketMQ™ 基于 Java 的高性能、高吞吐量的分布式消息和流计算平台。
+4. Dubbo：Apache Dubbo™ 是一款高性能 Java RPC 框架。
+5. Seata：阿里巴巴开源产品，一个易于使用的高性能微服务分布式事务解决方案。
+6. Alibaba Cloud OSS：阿里云对象存储服务（Object Storage Service，简称 OSS），是阿里云提供的海量、安全、低成本、高可靠的云存储服务。您可以在任何应用、任何时间、任何地点存储和访问任意类型的数据。
+7. Alibaba Cloud SchedulerX：阿里中间件团队开发的一款分布式任务调度产品，支持周期性的任务与固定时间点触发任务。
+8. Alibaba Cloud SMS：覆盖全球的短信服务，友好、高效、智能的互联化通讯能力，帮助企业迅速搭建客户触达通道。
+  `Alibaba Cloud OSS`、`Alibaba Cloud SchedulerX`、`Alibaba Cloud SMS` 是阿里云相关的付费业务。
 #### 18. SpringCloud Alibaba Nacos 服务注册和配置中心
-  xxxxxxxxxxxxxxxxxxx
+##### 18.1 什么是 Nacos
+  Nacos（Dynamic Naming and Configuration Service）：一个更易于构建云原生应用的动态服务发现，配置管理和服务管理中心。我们可以理解为：Nacos = 服务注册中心 + 配置中心；等价于 Nacos = Eureka + Spring Cloud Config + Spring Cloud Bus。
+  Nacos 可以替代 Eureka 来实现 服务注册中心、可以替代 Spring Cloud Config 来实现服务配置中心、可以替代 Spring Cloud Bus 来实现 配置的全局广播。Nacos 是更强调云原生时代支持 “服务治理、服务沉淀、共享、持续发展” 理念的注册中心和配置中心。(附：[Nacos 官网]('https://nacos.io/zh-cn/index.html' Nacos 官网))
+
+##### 18.2 Nacos 安装运行
+  从官网下载 Nacos ：[1.3.1 版本下载地址](https://github.com/alibaba/nacos/releases/tag/1.3.1 '1.3.1 版本下载地址')，你也可以选择指定版本下载：[选择指定版本下载](https://github.com/alibaba/nacos/releases '选择指定版本下载')。
+  下载完成后，解压缩，直接运行 bin 目录下的 startup.cmd ，即可启动 Nacos 服务，使用的是 8848 端口。
+  运行成功后，直接访问 http://localhost:8848/nacos 就可以进入 Nacos 的为我们提供的 web 控制台。用户名、密码默认为 nacos(1.2.0 版本不需要输入密码)，控制台还是挺清新的哈，还提供中文支持。
+##### 18.3 Nacos用作服务注册中心
+  Nacos 可以替代 Eureka 来作为 服务注册中心。附：[Nacos 服务注册中心官方文档](https://spring-cloud-alibaba-group.github.io/github-pages/hoxton/en-us/index.html#_spring_cloud_alibaba_nacos_discovery 'Nacos 服务注册中心官方文档')。接下来就介绍 Nacos 用作服务注册中心。
+##### 18.4 Nacos用作服务配置中心
+##### 18.5 什么是 Nacos
 
 #### 19. SpringCloud Alibaba Sentinel 熔断与限流
-  xxxxxxxxxxxxxxxxxxx
+1. [Sentinel GitHub 官网](https://github.com/alibaba/Sentinel 'Sentinel GitHub 官网')
+2. [Sentinel Wiki中文介绍文档](https://github.com/alibaba/Sentinel/wiki/%E4%BB%8B%E7%BB%8D 'Sentinel Wiki中文介绍文档')
+3. [Spring Cloud 关于 Sentinel 使用文档](https://spring-cloud-alibaba-group.github.io/github-pages/hoxton/en-us/index.html#_spring_cloud_alibaba_sentinel 'Spring Cloud 关于 Sentinel 使用文档')
+##### 19.1 Sentinel 是什么
+  随着微服务的流行，服务和服务之间的稳定性变得越来越重要。Sentinel 以流量为切入点，从流量控制、熔断降级、系统负载保护等多个维度保护服务的稳定性。
+Sentinel 具有以下特征:
++ 丰富的应用场景：Sentinel 承接了阿里巴巴近 10 年的双十一大促流量的核心场景，例如秒杀（即突发流量控制在系统容量可以承受的范围）、消息削峰填谷、集群流量控制、实时熔断下游不可用应用等。
++ 完备的实时监控：Sentinel 同时提供实时的监控功能。您可以在控制台中看到接入应用的单台机器秒级数据，甚至 500 台以下规模的集群的汇总运行情况。
++ 广泛的开源生态：Sentinel 提供开箱即用的与其它开源框架/库的整合模块，例如与 Spring Cloud、Dubbo、gRPC 的整合。您只需要引入相应的依赖并进行简单的配置即可快速地接入 Sentinel。
++ 完善的 SPI 扩展点：Sentinel 提供简单易用、完善的 SPI 扩展接口。您可以通过实现扩展接口来快速地定制逻辑。例如定制规则管理、适配动态数据源等。
 
+Sentinel 分为两个部分:
++ 核心库（Java 客户端）不依赖任何框架/库，能够运行于所有 Java 运行时环境，同时对 Dubbo / Spring Cloud 等框架也有较好的支持。
++ 控制台（Dashboard）基于 Spring Boot 开发，打包后可以直接运行，不需要额外的 Tomcat 等应用容器。
 #### 20. SpringCloud Alibaba Seata 处理分布式事务
-  xxxxxxxxxxxxxxxxxxx
+1. [Seata 官网](http://seata.io/zh-cn/index.html 'Seata 官网')
+2. [Seata 源码 GitHub 地址](https://github.com/seata/seata 'Seata 源码 GitHub 地址')
+3. [Seata 官方文档(比较鸡肋，介绍不清楚)](http://seata.io/zh-cn/docs/overview/what-is-seata.html 'Seata 官方文档')
+4. [Seata 下载地址](http://seata.io/zh-cn/blog/download.html 'Seata 下载地址')
+##### 20.1 分布式事务的问题
+  学习到Seata，我默认大家对事务已经有了一定的了解，关于事务此处就不过多介绍。在之前 单机单库 环境下，针对事务的处理还是比较简单的。尤其是结合 Spring 框架，可以说是一个@Transaction 注解走天下。事务 & Spring 事务相关内容，点击链接去了解吧：[事务 & Spring 事务内容介绍](https://blog.csdn.net/lzb348110175/article/details/104854696 '事务 & Spring 事务内容介绍')
+  在如今 Spring Cloud 分布式微服务架构体系中，按业务模块划分，一个模块使用一个数据库。多个模块配合来完成一个业务，官网微服务实例 [官网](http://seata.io/zh-cn/docs/user/quickstart.html '官网')。
+  单体应用被拆分成微服务应用，原来的三个模块被拆分成三个独立的应用，分别使用三个独立的数据源，业务操作需要调用三个服务来完成。此时每个服务内部的数据一致性由本地事务来保证，但是全局数据一致性问题是无法保证的。救世主 Seata 它来了。
+
+##### 20.2 什么是 Seata
+  `Seata 是一款开源的分布式事务解决方案，致力于提供高性能和简单易用的分布式事务服务。` Seata 将为用户提供了 `AT`、`TCC`、`SAGA` 和 `XA` 事务模式，为用户打造一站式的分布式解决方案。
+  在 Seata 开源之前，Seata 对应的内部版本在阿里经济体内部一直扮演着分布式一致性中间件的角色，帮助经济体平稳的度过历年的双11，对各部门业务进行了有力的支撑。经过多年沉淀与积累，商业化产品先后在阿里云、金融云进行售卖。2019.1 为了打造更加完善的技术生态和普惠技术成果，Seata 正式宣布对外开源，未来 Seata 将以社区共建的形式帮助其技术更加可靠与完备。
+
+##### 20.3 AT 模式
+##### 20.4 TCC 模式
+##### 20.5 SAGA 模式
+##### 20.6 XA 模式
