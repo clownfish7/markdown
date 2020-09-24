@@ -2062,10 +2062,191 @@ spring:
   从官网下载 Nacos ：[1.3.1 版本下载地址](https://github.com/alibaba/nacos/releases/tag/1.3.1 '1.3.1 版本下载地址')，你也可以选择指定版本下载：[选择指定版本下载](https://github.com/alibaba/nacos/releases '选择指定版本下载')。
   下载完成后，解压缩，直接运行 bin 目录下的 startup.cmd ，即可启动 Nacos 服务，使用的是 8848 端口。
   运行成功后，直接访问 http://localhost:8848/nacos 就可以进入 Nacos 的为我们提供的 web 控制台。用户名、密码默认为 nacos(1.2.0 版本不需要输入密码)，控制台还是挺清新的哈，还提供中文支持。
+
+**docker 启动**[github说明](https://github.com/nacos-group/nacos-docker/blob/master/README_ZH.md 'github说明')
+```shell
+docker run -d \
+--name nacos \
+-p 8848:8848 \
+-e JVM_XMS=128m \
+-e JVM_XMX=128m \
+-e MODE=standalone \
+-e SPRING_DATASOURCE_PLATFORM=mysql \
+-e NACOS_SERVER_IP=127.0.0.1 \
+-e MYSQL_SERVICE_HOST=127.0.0.1 \
+-e MYSQL_SERVICE_PORT=3306 \
+-e MYSQL_SERVICE_DB_NAME=nacos_config \
+-e MYSQL_SERVICE_USER=username \
+-e MYSQL_SERVICE_PASSWORD=password \
+docker.io/nacos/nacos-server
+```
+
 ##### 18.3 Nacos用作服务注册中心
   Nacos 可以替代 Eureka 来作为 服务注册中心。附：[Nacos 服务注册中心官方文档](https://spring-cloud-alibaba-group.github.io/github-pages/hoxton/en-us/index.html#_spring_cloud_alibaba_nacos_discovery 'Nacos 服务注册中心官方文档')。接下来就介绍 Nacos 用作服务注册中心。
+  pom.xml 启动类加注解 `@EnableDiscoveryClient`
+```xml
+<dependency>
+    <groupId>com.alibaba.cloud</groupId>
+    <artifactId>spring-cloud-starter-alibaba-nacos-discovery</artifactId>
+</dependency>
+```
+  application.yml
+```yml
+server:
+  port: 83
+
+spring:
+  application:
+    name: cloud-order-consumer
+  cloud:
+    nacos:
+      discovery:
+        server-addr: 47.97.8.7:8848
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+```
+  **nacos 默认集成了 ribbon**实现负载均衡，restTemplate切莫忘记加@LoadBalanced
+
+|   | Nacos | Eureka | Consul | CoreDNS | ZooKeeper |
+| :---: | :---: | :---: | :---: | :---: | :---: |
+| 一致性检查 | CP+AP | AP | CP | / | CP|
+| 健康检查 | TCP/HTTP/MySQL/Client Beat | Client Beat | TCP/HTTP/gRPC/Cmd | / | Client Beat|
+| 负载均衡 | 权重/DSL/metadata/CMDB | Ribbon | Fabio | RR | / |
+| 雪崩保护 | 支持 | 支持 | 不支持 | 不支持 | 不支持 |
+| 自动注销实例 | 支持 | 支持 | 不支持 | 不支持 | 支持 |
+| 访问协议 | HTTP/DNS/UDP | HTTP | HTTP/DNS | DNS | TCP |
+| 监听支持 | 支持 | 支持 | 支持 | 不支持 | 支持 |
+| 多数据中心 | 支持 | 支持 | 支持 | 不支持 | 不支持 |
+| 跨注册中心 | 支持 | 不支持 | 支持 | 不支持 | 不支持 |
+| SpringCloud 集成 | 支持 | 支持 | 支持 | 不支持 | 不支持 |
+| Dubbo 集成 | 支持 | 不支持 | 不支持 | 不支持 | 支持 |
+| K8s 集成 | 支持 | 不支持 | 支持 | 支持 | 不支持 |
+
+###### Ⅰ Nacos支持AP和CP模式的切换
+`C`**一致性** `A` **高可用** `P` **容错性**。参考：[CAP原则](https://baike.baidu.com/item/CAP%E5%8E%9F%E5%88%99/5712863?fr=aladdin 'CAP原则')，主流选用的都是 AP 模式，保证系统的高可用。
+###### Ⅱ 何时选择使用何种模式
+  一般来说，如果不需要存储服务级别的信息，且服务实例是通过 Nacos-client 注册，并能够保证心跳上报，那么就可以选择 AP 模式。当前主流的服务如 Spring Cloud 和 Dubbo 服务，都适用于 AP 模式，AP模式为了服务的可用行而减弱了一致性，因此 AP 模式下只支持注册临时实例。
+
+  如果需要在服务级别编辑或者存储配置信息，那么 CP 是必须的，K8S服务和 DNS服务则适用于 CP 模式。CP模式下则支持注册持久化实例，此时则是以 Raft 协议为集群运行模式，该模式下注册实例之前必须先注册服务，如果服务不存在，则会返回错误。
+###### Ⅲ Nacos AP/CP 模式切换命令
+  Nacos 集群默认支持的是CAP原则中的 AP原则，但是 也可切换为CP原则，切换命令如下：
+```shell
+curl -X PUT '$NACOS_SERVER:8848/nacos/v1/ns/operator/switches?entry=serverMode&value=CP'
+```
+  同时微服务的 bootstrap.properties 需配置如下选项指明注册为临时/永久实例，AP模式不支持数据一致性，所以只支持服务注册的临时实例，CP模式支持服务注册的永久实例，满足配置文件的一致性。
+```yml
+#false为永久实例，true表示临时实例开启，注册为临时实例
+spring: 
+  cloud: 
+    nacos: 
+	  discovery: 
+		ephemeral: false
+```
 ##### 18.4 Nacos用作服务配置中心
-##### 18.5 什么是 Nacos
+  Nacos 可以替代 Config + Bus 来用作 `服务配置中心`。附：[Nacos服务配置中心官方文档](https://spring-cloud-alibaba-group.github.io/github-pages/hoxton/en-us/index.html#_spring_cloud_alibaba_nacos_config 'Nacos服务配置中心官方文档')。Nacos 用作服务配置中心，分为 `基础配置(简单使用)` 和 `分类配置(多环境使用 dev、test、prod等环境)`。接下来就介绍 Nacos 用作服务配置中心。附：[Github Wiki](https://github.com/alibaba/spring-cloud-alibaba/wiki/Nacos-config 'Github Wiki')
+###### Nacos 基础配置
+  pom.xml 主启动类添加开启 @EnableDiscoveryClient
+```xml
+<dependencies>
+        <dependency>
+            <groupId>com.alibaba.cloud</groupId>
+            <artifactId>spring-cloud-starter-alibaba-nacos-config</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.alibaba.cloud</groupId>
+            <artifactId>spring-cloud-starter-alibaba-nacos-discovery</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+    </dependencies>
+```
+  application.yml
+```yaml
+spring:
+  profiles:
+    active: test
+```
+  bootstrap.yml
+```yaml
+server:
+  port: 3377
+
+spring:
+  application:
+    name: cloud-config-client
+  cloud:
+    nacos:
+      config:
+        # Nacos 服务配置中心地址
+        server-addr: 47.97.8.7:8848
+        # 指定 yaml 格式的配置
+        file-extension: yaml
+        # Nacos 命名空间
+        namespace: 8a6827d8-4c11-40a6-9efd-0d92f1bb830e
+        # Nacos 分组
+        group: group1
+        # Nacos 集群 cluster
+        cluster-name: cluster1
+      discovery:
+        # Nacos 服务配置中心地址
+        server-addr: 47.97.8.7:8848
+        # Nacos 命名空间
+        namespace: 8a6827d8-4c11-40a6-9efd-0d92f1bb830e
+        # Nacos 分组
+        group: group1
+        # Nacos 集群 cluster
+        cluster-name: cluster1
+```
+  controller.java 业务类添加 @RefreshScope 实现配置自动更新
+```java
+@RefreshScope
+@RestController //通过Spring Cloud 原生注解 @RefreshScope 实现配置自动更新
+public class ConfigClientController {
+
+    @Value("${config.info}")
+    private String configInfo;
+
+    @GetMapping("/config/info")
+    public String getConfigInfo() {
+        return configInfo;
+    }
+}
+```
+  进入 Nacos → 配置管理 → 配置列表 → + 号 添加配置项。Data ID 按规则编写，Group 在接下来的 分类配置 会有介绍。
+**Nacos 自带动态刷新**
+  使用 Spring Cloud Config 时，需要配合 Spring Cloud Bus + RabbitMQ 中间件，进行广播方式才能 实现动态刷新。Nacos则自带动态刷新,修改下Nacos中的yaml配置文件，再次调用查看配置的接口，就会发现配置已经刷新。好用！！！
+**dataId 命名规则**
+  在 Nacos Spring Cloud 中， `dataId` 有明确的配置规则，官方也有说明。进入链接查看：[官网链接](https://nacos.io/zh-cn/docs/quick-start-spring-cloud.html '官网链接')。此处也做一点简单介绍。`dataId` 的完整格式如下：
+```
+${prefix}-${spring.profile.active}.${file-extension}
+```
++ `prefix` 默认为 `spring.application.name` 的值，也可以通过配置项 `spring.cloud.nacos.config.prefix`来配置。
++ `spring.profile.active` 即为当前环境对应的 `profile`。注意：当 `spring.profile.active` 为空时，对应的连接符 `-` 也将不存在，`dataId` 的拼接格式变成 `${prefix}.${file-extension}`（建议：不要让 `spring.profile.active` 为空，或许会有一些意外的问题）
++ `file-exetension` 为配置内容的数据格式，可以通过配置项 `spring.cloud.nacos.config.file-extension` 来配置。目前只支持 `properties` 和 `yaml` 类型。**（此处yaml与yml有区别）**
+###### Nacos 分类配置
+  项目开发中，一定会遇到 `多环境`、`多项目管理` 问题。遇到下面问题时，Nacos 基础配置显然无法解决这些问题，接下来就对 `Nacos 命名空间` 及 `Group` 相关概念的了解。
+  问题1： 实际开发中，通常一个系统会准备 `dev开发环境`、`test测试环境`、`prod生产环境`，如何保证指定环境启动时服务能够正确读取到 Nacos 上相应环境的配置文件？
+  问题2： 一个大型的分布式微服务系统会有很多个微服务子项目，每个微服务项目又都会有相应的 `dev开发环境`、`test测试环境`、`prod生产环境` 等，那怎么对这些微服务配置进行管理呢？
+
+**Ⅰ. Nacos的命名规则说明**
+  Nacos 命名由 `Namespace(命名空间)` + `Group(分组)` + `Data ID(实例ID)` 三部分组成，类似于 Java 中的 `package(报名)` + `class(类名)` 方式。最外层 `Namespace` 用于区分部署环境；`Group` 和 `Data ID` 逻辑上用于区分两个目标对象。
+  默认情况下：Namespace = public，Group = DEFAULT_GROUP，Cluster=DEFAULT
+  `Namespace` 主要用来实现隔离，Nacos 默认的命名空间是 public。比方说我们现在有三个环境：开发、测试、生产环境，我们就可以创建三个 Namespace，不同的 Namespace 之间是隔离的；
+  `Group` 是一组配置集，是组织配置的维度之一。默认是 DEFAULT_GROUP。通过一个有意义的 名称 对配置集进行分组，从而区分 Data ID 相同的配置集。配置分组的常见场景：不同的应用或组件使用了相同的配置类型，就可以把不同的微服务划分到同一个分组里面去，从而解决问题2；如 database_url 配置和 MQ_topic 配置。
+  `Service` 微服务；一个 Service 可以包含多个 Cluster(集群)，Nacos 默认 Cluster 是 DEFAULT，Cluster 是对指定微服务的一个虚拟划分。比方说为了容灾，将 Service 微服务分别部署在了杭州机房和广州机房，这是就可以给杭州机房的 Service 微服务起一个集群名称(HZ)，给广州机房的 Service 微服务起一个集群名称(GZ)，还可以尽量让同一个机房的微服务互相调用，以提升性能。
+  `Instance`，就是一个个微服务实例。
+**Ⅱ. 新建Namespace**
+  选择 命名空间 → 新建命名空间，进行命名空间的设置。在 Nacos 1.1.4 版本，还不支持自定义命名空间ID，Nacos 1.2.0 版本后开始支持自定义命名空间ID 了。更推荐你使用自定义命名空间。
 
 #### 19. SpringCloud Alibaba Sentinel 熔断与限流
 1. [Sentinel GitHub 官网](https://github.com/alibaba/Sentinel 'Sentinel GitHub 官网')
