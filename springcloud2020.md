@@ -2255,6 +2255,7 @@ ${prefix}-${spring.profile.active}.${file-extension}
 ##### 19.1 Sentinel 是什么
   随着微服务的流行，服务和服务之间的稳定性变得越来越重要。Sentinel 以流量为切入点，从流量控制、熔断降级、系统负载保护等多个维度保护服务的稳定性。
 Sentinel 具有以下特征:
+
 + 丰富的应用场景：Sentinel 承接了阿里巴巴近 10 年的双十一大促流量的核心场景，例如秒杀（即突发流量控制在系统容量可以承受的范围）、消息削峰填谷、集群流量控制、实时熔断下游不可用应用等。
 + 完备的实时监控：Sentinel 同时提供实时的监控功能。您可以在控制台中看到接入应用的单台机器秒级数据，甚至 500 台以下规模的集群的汇总运行情况。
 + 广泛的开源生态：Sentinel 提供开箱即用的与其它开源框架/库的整合模块，例如与 Spring Cloud、Dubbo、gRPC 的整合。您只需要引入相应的依赖并进行简单的配置即可快速地接入 Sentinel。
@@ -2276,6 +2277,397 @@ Sentinel 分为两个部分:
 ##### 20.2 什么是 Seata
   `Seata 是一款开源的分布式事务解决方案，致力于提供高性能和简单易用的分布式事务服务。` Seata 将为用户提供了 `AT`、`TCC`、`SAGA` 和 `XA` 事务模式，为用户打造一站式的分布式解决方案。
   在 Seata 开源之前，Seata 对应的内部版本在阿里经济体内部一直扮演着分布式一致性中间件的角色，帮助经济体平稳的度过历年的双11，对各部门业务进行了有力的支撑。经过多年沉淀与积累，商业化产品先后在阿里云、金融云进行售卖。2019.1 为了打造更加完善的技术生态和普惠技术成果，Seata 正式宣布对外开源，未来 Seata 将以社区共建的形式帮助其技术更加可靠与完备。
+
+```shell
+docker run -d \
+--name seata \
+-p 8091:8091 \
+-e SEATA_IP=47.97.8.7 \
+-e SEATA_PORT=8091 \
+-e SEATA_CONFIG_NAME=file:/root/seata-config/registry \
+-v /data/seata/config:/root/seata-config  \
+seataio/seata-server
+```
+file.json
+```json
+transport {
+  # tcp udt unix-domain-socket
+  type = "TCP"
+  #NIO NATIVE
+  server = "NIO"
+  #enable heartbeat
+  heartbeat = true
+  # the client batch send request enable
+  enableClientBatchSendRequest = false
+  #thread factory for netty
+  threadFactory {
+    bossThreadPrefix = "NettyBoss"
+    workerThreadPrefix = "NettyServerNIOWorker"
+    serverExecutorThreadPrefix = "NettyServerBizHandler"
+    shareBossWorker = false
+    clientSelectorThreadPrefix = "NettyClientSelector"
+    clientSelectorThreadSize = 1
+    clientWorkerThreadPrefix = "NettyClientWorkerThread"
+    # netty boss thread size,will not be used for UDT
+    bossThreadSize = 1
+    #auto default pin or 8
+    workerThreadSize = "default"
+  }
+  shutdown {
+    # when destroy server, wait seconds
+    wait = 3
+  }
+  serialization = "seata"
+  compressor = "none"
+}
+
+## transaction log store, only used in server side
+store {
+  ## store mode: file、db
+  mode = "db"
+  ## file store property
+  file {
+    ## store location dir
+    dir = "sessionStore"
+    # branch session size , if exceeded first try compress lockkey, still exceeded throws exceptions
+    maxBranchSessionSize = 16384
+    # globe session size , if exceeded throws exceptions
+    maxGlobalSessionSize = 512
+    # file buffer size , if exceeded allocate new buffer
+    fileWriteBufferCacheSize = 16384
+    # when recover batch read size
+    sessionReloadReadSize = 100
+    # async, sync
+    flushDiskMode = async
+  }
+
+  ## database store property
+  db {
+    ## the implement of javax.sql.DataSource, such as DruidDataSource(druid)/BasicDataSource(dbcp) etc.
+    datasource = "druid"
+    ## mysql/oracle/postgresql/h2/oceanbase etc.
+    dbType = "mysql"
+    driverClassName = "com.mysql.jdbc.Driver"
+    url = "jdbc:mysql://47.97.8.7:3306/seata"
+    user = "dev"
+    password = "productdev123"
+    minConn = 5
+    maxConn = 30
+    globalTable = "global_table"
+    branchTable = "branch_table"
+    lockTable = "lock_table"
+    queryLimit = 100
+  }
+}
+## server configuration, only used in server side
+server {
+  recovery {
+    #schedule committing retry period in milliseconds
+    committingRetryPeriod = 1000
+    #schedule asyn committing retry period in milliseconds
+    asynCommittingRetryPeriod = 1000
+    #schedule rollbacking retry period in milliseconds
+    rollbackingRetryPeriod = 1000
+    #schedule timeout retry period in milliseconds
+    timeoutRetryPeriod = 1000
+  }
+  undo {
+    logSaveDays = 7
+    #schedule delete expired undo_log in milliseconds
+    logDeletePeriod = 86400000
+  }
+  #check auth
+  enableCheckAuth = true
+  #unit ms,s,m,h,d represents milliseconds, seconds, minutes, hours, days, default permanent
+  maxCommitRetryTimeout = "-1"
+  maxRollbackRetryTimeout = "-1"
+  rollbackRetryTimeoutUnlockEnable = false
+}
+
+## metrics configuration, only used in server side
+metrics {
+  enabled = false
+  registryType = "compact"
+  # multi exporters use comma divided
+  exporterList = "prometheus"
+  exporterPrometheusPort = 9898
+}
+
+```
+registry.conf
+```json
+registry {
+  # file 、nacos 、eureka、redis、zk、consul、etcd3、sofa
+  type = "nacos"
+
+  nacos {
+    application = "seata-server"
+    serverAddr = "47.97.8.7:8848"
+    group = "SEATA_GROUP"
+    namespace = ""
+    cluster = "default"
+    username = ""
+    password = ""
+  }
+  eureka {
+    serviceUrl = "http://localhost:8761/eureka"
+    application = "default"
+    weight = "1"
+  }
+  redis {
+    serverAddr = "localhost:6379"
+    db = 0
+    password = ""
+    cluster = "default"
+    timeout = 0
+  }
+  zk {
+    cluster = "default"
+    serverAddr = "127.0.0.1:2181"
+    sessionTimeout = 6000
+    connectTimeout = 2000
+    username = ""
+    password = ""
+  }
+  consul {
+    cluster = "default"
+    serverAddr = "127.0.0.1:8500"
+  }
+  etcd3 {
+    cluster = "default"
+    serverAddr = "http://localhost:2379"
+  }
+  sofa {
+    serverAddr = "127.0.0.1:9603"
+    application = "default"
+    region = "DEFAULT_ZONE"
+    datacenter = "DefaultDataCenter"
+    cluster = "default"
+    group = "SEATA_GROUP"
+    addressWaitTime = "3000"
+  }
+  file {
+    name = "file.conf"
+  }
+}
+
+config {
+  # file、nacos 、apollo、zk、consul、etcd3
+  type = "nacos"
+
+  nacos {
+    serverAddr = "47.97.8.7:8848"
+    namespace = ""
+    group = "SEATA_GROUP"
+    username = ""
+    password = ""
+  }
+  consul {
+    serverAddr = "127.0.0.1:8500"
+  }
+  apollo {
+    appId = "seata-server"
+    apolloMeta = "http://192.168.1.204:8801"
+    namespace = "application"
+  }
+  zk {
+    serverAddr = "127.0.0.1:2181"
+    sessionTimeout = 6000
+    connectTimeout = 2000
+    username = ""
+    password = ""
+  }
+  etcd3 {
+    serverAddr = "http://localhost:2379"
+  }
+  file {
+    name = "file.conf"
+  }
+}
+
+```
+config.txt
+```txt
+transport.type=TCP
+transport.server=NIO
+transport.heartbeat=true
+transport.enableClientBatchSendRequest=false
+transport.threadFactory.bossThreadPrefix=NettyBoss
+transport.threadFactory.workerThreadPrefix=NettyServerNIOWorker
+transport.threadFactory.serverExecutorThreadPrefix=NettyServerBizHandler
+transport.threadFactory.shareBossWorker=false
+transport.threadFactory.clientSelectorThreadPrefix=NettyClientSelector
+transport.threadFactory.clientSelectorThreadSize=1
+transport.threadFactory.clientWorkerThreadPrefix=NettyClientWorkerThread
+transport.threadFactory.bossThreadSize=1
+transport.threadFactory.workerThreadSize=default
+transport.shutdown.wait=3
+service.vgroupMapping.my_test_tx_group=default
+service.default.grouplist=47.97.8.7:8091
+service.enableDegrade=false
+service.disableGlobalTransaction=false
+client.rm.asyncCommitBufferLimit=10000
+client.rm.lock.retryInterval=10
+client.rm.lock.retryTimes=30
+client.rm.lock.retryPolicyBranchRollbackOnConflict=true
+client.rm.reportRetryCount=5
+client.rm.tableMetaCheckEnable=false
+client.rm.sqlParserType=druid
+client.rm.reportSuccessEnable=false
+client.rm.sagaBranchRegisterEnable=false
+client.tm.commitRetryCount=5
+client.tm.rollbackRetryCount=5
+store.mode=db
+store.file.dir=file_store/data
+store.file.maxBranchSessionSize=16384
+store.file.maxGlobalSessionSize=512
+store.file.fileWriteBufferCacheSize=16384
+store.file.flushDiskMode=async
+store.file.sessionReloadReadSize=100
+store.db.datasource=druid
+store.db.dbType=mysql
+store.db.driverClassName=com.mysql.jdbc.Driver
+store.db.url=jdbc:mysql://47.97.8.7:3306/seata?useUnicode=true
+store.db.user=dev
+store.db.password=productdev123
+store.db.minConn=5
+store.db.maxConn=30
+store.db.globalTable=global_table
+store.db.branchTable=branch_table
+store.db.queryLimit=100
+store.db.lockTable=lock_table
+store.db.maxWait=5000
+server.recovery.committingRetryPeriod=1000
+server.recovery.asynCommittingRetryPeriod=1000
+server.recovery.rollbackingRetryPeriod=1000
+server.recovery.timeoutRetryPeriod=1000
+server.maxCommitRetryTimeout=-1
+server.maxRollbackRetryTimeout=-1
+server.rollbackRetryTimeoutUnlockEnable=false
+client.undo.dataValidation=true
+client.undo.logSerialization=jackson
+server.undo.logSaveDays=7
+server.undo.logDeletePeriod=86400000
+client.undo.logTable=undo_log
+client.log.exceptionRate=100
+transport.serialization=seata
+transport.compressor=none
+metrics.enabled=false
+metrics.registryType=compact
+metrics.exporterList=prometheus
+metrics.exporterPrometheusPort=9898
+```
+nacos-config.sh
+```shell
+#!/usr/bin/env bash
+# Copyright 1999-2019 Seata.io Group.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at、
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+while getopts ":h:p:g:t:" opt
+do
+  case $opt in
+  h)
+    host=$OPTARG
+    ;;
+  p)
+    port=$OPTARG
+    ;;
+  g)
+    group=$OPTARG
+    ;;
+  t)
+    tenant=$OPTARG
+    ;;
+  ?)
+    echo " USAGE OPTION: $0 [-h host] [-p port] [-g group] [-t tenant] "
+    exit 1
+    ;;
+  esac
+done
+
+if [[ -z ${host} ]]; then
+    host=localhost
+fi
+if [[ -z ${port} ]]; then
+    port=8848
+fi
+if [[ -z ${group} ]]; then
+    group="SEATA_GROUP"
+fi
+if [[ -z ${tenant} ]]; then
+    tenant=""
+fi
+
+nacosAddr=$host:$port
+contentType="content-type:application/json;charset=UTF-8"
+
+echo "set nacosAddr=$nacosAddr"
+echo "set group=$group"
+
+failCount=0
+tempLog=$(mktemp -u)
+function addConfig() {
+  curl -X POST -H "${1}" "http://$2/nacos/v1/cs/configs?dataId=$3&group=$group&content=$4&tenant=$tenant" >"${tempLog}" 2>/dev/null
+  if [[ -z $(cat "${tempLog}") ]]; then
+    echo " Please check the cluster status. "
+    exit 1
+  fi
+  if [[ $(cat "${tempLog}") =~ "true" ]]; then
+    echo "Set $3=$4 successfully "
+  else
+    echo "Set $3=$4 failure "
+    (( failCount++ ))
+  fi
+}
+
+count=0
+for line in $(cat $PWD/config.txt | sed s/[[:space:]]//g); do
+  (( count++ ))
+	key=${line%%=*}
+  value=${line#*=}
+	addConfig "${contentType}" "${nacosAddr}" "${key}" "${value}"
+done
+
+echo "========================================================================="
+echo " Complete initialization parameters,  total-count:$count ,  failure-count:$failCount "
+echo "========================================================================="
+
+if [[ ${failCount} -eq 0 ]]; then
+	echo " Init nacos config finished, please start seata-server. "
+else
+	echo " init nacos config fail. "
+fi
+
+```
+pom.xml @EnableDiscoveryClient @GlobalTransactional
+```xml
+<dependenices>
+    <!-- nacos -->
+    <dependency>
+        <groupId>com.alibaba.cloud</groupId>
+        <artifactId>spring-cloud-starter-alibaba-nacos-discovery</artifactId>
+    </dependency>
+    <!-- seata -->
+    <dependency>
+        <groupId>com.alibaba.cloud</groupId>
+        <artifactId>spring-cloud-starter-alibaba-seata</artifactId>
+    </dependency>
+</dependenices>
+```
+
+```java
+```
 
 ##### 20.3 AT 模式
 ##### 20.4 TCC 模式
