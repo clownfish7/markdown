@@ -2264,6 +2264,351 @@ Sentinel 具有以下特征:
 Sentinel 分为两个部分:
 + 核心库（Java 客户端）不依赖任何框架/库，能够运行于所有 Java 运行时环境，同时对 Dubbo / Spring Cloud 等框架也有较好的支持。
 + 控制台（Dashboard）基于 Spring Boot 开发，打包后可以直接运行，不需要额外的 Tomcat 等应用容器。
+##### 19.2 安装 Sentinel 控制台
+  [Sentinel Dashboard 下载地址](https://github.com/alibaba/Sentinel/releases Sentinel Dashboard 下载地址)，选好版本后，选择 sentinel-dashboard-1.7.2.jar 进行下载。使用 java -jar sentinel-dashboard-1.7.2.jar 方式直接运行。使用 http://localhost:8080 访问 Sentinel 图形管理界面。登陆账号、密码均为：sentinel
+```shell
+docker run -d \
+--name sentinel \
+-p 8858:8858 \
+-p 8719:8719 \
+-e csp.sentinel.dashboard.server=47.97.8.7:8780 \
+-e csp.sentinel.api.port=8710 \
+-e csp.sentinel.heartbeat.client.ip=47.97.8.7 \
+bladex/sentinel-dashboard
+```
+##### 19.3 微服务项目整合Sentinel
+  使用 Sentinel 最好配好 Nacos 一起使用。
+  pom.xml
+```xml
+<dependencies>
+    <dependency>
+        <groupId>com.alibaba.cloud</groupId>
+        <artifactId>spring-cloud-starter-alibaba-nacos-discovery</artifactId>
+    </dependency>
+    <dependency>
+        <groupId>com.alibaba.cloud</groupId>
+        <artifactId>spring-cloud-starter-alibaba-sentinel</artifactId>
+    </dependency>
+</dependencies>
+```
+  application.yml 主启动类添加 @EnableDiscoveryClient 注解
+```yml
+server:
+  port: 8401
+
+spring:
+  application:
+    name: cloud-sentinel-service
+  cloud:
+    nacos:
+      discovery:
+        server-addr: 47.97.8.7:8848
+    sentinel:
+      transport:
+        #配置sentinel dashboard地址
+        dashboard: 127.0.0.1:8080
+        #sentinel默认8719，假如被占用了会自动从8719开始依次+1扫描。直至找到未被占用的端口
+        port: 8719
+        clientIp: 127.0.0.1
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+```
+  业务类
+```java
+@RestController
+@RequestMapping("/a")
+public class FlowLimitController {
+
+    @GetMapping("/testA")
+    public String testA() {
+        return "-----testA";
+    }
+
+    @GetMapping("/testB")
+    public String testB(){
+        return "-----testB";
+    }
+}
+```
+  此时进入 Sentinel 图形管理界面，并没有看到关于微服务任何信息。这是因为 Sentinel 采用的懒加载机制，只有执行一次方法调用，才能被Sentinel监控到。 然后多次调用 /testA 接口，在实时监控便能够看到接口 调用时间、QPS、响应时间 等内容。 说明：Sentinel 8080 已经在监控微服务 8401，监控会有一丁点的延迟。服务一段时间不调用，实时监控会消失哦
+##### 19.4 流控规则
+  流控规则，即：流量控制规则。可自行参考官网介绍：[GitHub 流量控制](https://github.com/alibaba/Sentinel/wiki/%E6%B5%81%E9%87%8F%E6%8E%A7%E5%88%B6 GitHub 流量控制)。具体配置有 资源名、针对来源、阈值类型、是否集群、流控模式、单机阈值、流控效果 这几项，它们配合进行使用。每一项具体代表的什么含义，且听我娓娓道来。
+
+> 资源名：唯一路径，默认为请求路径（也可以是后续介绍的 @SentinelResource 注解的 value 属性值）
+> 针对来源：Sentinel 可以针对调用者进行限流，填写微服务名。默认为 default（不区分来源）
+> 是否集群：本文为单机测试，是否集群不选
+![sentinel1](https://gitee.com/clownfish7/image/raw/master/springcloud-alibaba-sentinel/sentinel1.png 'sentinel1')
+###### 19.4.1 阈值类型：QPS
+  QPS（每秒钟的请求数量）：当调用该 API 的 QPS 达到阈值的时候，进行限流。
+![sentinel2](https://gitee.com/clownfish7/image/raw/master/springcloud-alibaba-sentinel/sentinel2.png 'sentinel2')
+  /testA 服务，每秒只允许调用 1 次，超出阈值后，流控效果为：直接 → 快速失败(流控效果如果不选，默认为 直接 → 快速失败)。
+| 资源名称 | 阈值类型 | 单机阈值 | 流控模式 | 流控效果 |
+| :---: | :---: | :---: | :---: | :---: |
+| /testA | QPS | 1 | 直接 | 快速失败 |
+  每秒调用 /testA 服务 1次，服务正常。后续狂点刷新调用服务，显然超过 Sentinel 设定的 QPS = 1，就会进行流量控制：快速失败（流控 Sentinel 默认提示：Blocked by Sentinel(flow limiting)）
+###### 19.4.2 阈值类型：线程数
+  线程数：当调用该 API 的 线程数 达到阈值的时候，进行限流。
+![sentinel3](https://gitee.com/clownfish7/image/raw/master/springcloud-alibaba-sentinel/sentinel3.png 'sentinel3')
+  /testA 服务，单个线程只允许调用 1 次，超出阈值后，流控效果为：直接 → 快速失败。
+| 资源名称 | 阈值类型 | 单机阈值 | 流控模式 | 流控效果 |
+| :---: | :---: | :---: | :---: | :---: |
+| /testA | 线程数 | 1 | 直接 | 快速失败 |
+  调用 /testA 服务 1 次，服务正常，但是 sleep 导致服务没有返回。当第 3 次调用时，显然超过 Sentinel 设定的 线程数 = 1，就会进行流量控制：快速失败
+###### 19.4.3 流控模式：直接
+  流控模式：直接，已经介绍，字面理解即可。没啥可说的。
+  这些选项都是配合使用的，理解意思即可
+###### 19.4.4 流控模式：关联
+  关联：当关联的资源达到阈值时，就限流自己。当与 A 资源关联的 B 资源达到阈值时，就限流自己(A)，即：B惹事，A挂了
+  应用场景：双十一，支付接口和下单接口关联。当支付接口达到阈值，就限流下单接口
+![sentinel4](https://gitee.com/clownfish7/image/raw/master/springcloud-alibaba-sentinel/sentinel4.png 'sentinel4')
+  /testA 服务关联/testB 服务，1s 调用 1次，服务正常。当狂点刷新调用 /testB 服务，超出阈值 QPS = 1 后，此时 /testA 被限流了，这就是 B惹事，A挂了。
+| 资源名称 | 阈值类型 | 单机阈值 | 流控模式 | 关联资源 | 流控效果 |
+| :---: | :---: | :---: | :---: | :---: | :---: |
+| /testA | QPS | 1 | 关联 | /testB | 快速失败 |
+  /testA 和 /testB 1次/s 可以正常调用，突然大批量访问打到 /testB 请求。由于关联的 /testB 请求超过设定的阈值 QPS = 1，导致 /testA 请求被限流了。
+###### 19.4.5 流控模式：链路
+  链路：当链路中的资源达到阈值时，就会对使用到该资源的链路进行流控。当 A01 资源达到设定阈值时，所有调用该服务的链路，都会被限流，即：A01 挂了，用到我的链路都得挂
+1. A链路： A → A01 → A04 → A05
+2. B链路： B → A01 → A02 → A03
+![sentinel5](https://gitee.com/clownfish7/image/raw/master/springcloud-alibaba-sentinel/sentinel5.png 'sentinel5')
+![sentinel6](https://gitee.com/clownfish7/image/raw/master/springcloud-alibaba-sentinel/sentinel6.png 'sentinel6')
+  对 testA01 服务进行 链路 流控，该服务关联有 A 和 B 两条链路。当 A 链路1s 调用 1次，服务正常。当该链路调用 超出阈值 QPS = 1 后，此时A链路都会被限流，同时因为B链路也调用 testA01，所以B链路也会同时被限流调用。
+| 资源名称 | 针对来源 | 阈值类型 | 单机阈值 | 流控模式 | 入口资源 | 流控效果 |
+| :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| /testA | default | QPS | 1 | 链路 | sentinel_web_servlet_context | 快速失败 |
+  对 /testA 请求 1次/s 可以正常调用，当 /testA 请求 QPS > 1 后，满足设定的 testA01链路流控 规则 ，所以 /testA 请求 会被限流。同时 /testB 请求 也会被限流。 （即：testA01 QPS=1,1s 只允许调用1次，超出之后，调用 testA01 的所有链路将都会被限流）
+###### 19.4.6 流控效果：快速失败
+  流控效果：快速失败，已经介绍，字面理解即可。没啥可说的。
+  这些选项都是配合使用的，理解意思即可
+###### 19.4.7 流控效果：Warm Up
+  Warm Up：某个服务，日常访问量很少，基本为 0，突然1s访问量 10w，这种极端情况，会直接将服务击垮。所以通过配置 流控效果：Warm Up，允许系统慢慢呼呼的进行预热，经预热时长逐渐升至设定的QPS阈值。
+  
+> 公式：阈值/coldFactor（默认值为3）
+
+  应用场景：秒杀系统。秒杀系统在开启的瞬间，会有很多的流量上来，很有可能将系统打死。预热方式就是为了保护系统，可以慢慢的将流量放进来，最终将阈值增长到指定的数值
+![sentinel7](https://gitee.com/clownfish7/image/raw/master/springcloud-alibaba-sentinel/sentinel7.png 'sentinel7')
+  /testA 服务，设置 QPS 单机阈值为 10，采用 Warm Up 预热的方式，预热时长为 5s。根据计算公式 10 / 3 = 3，前 5s 的阈值为 3，预热 5s 后阈值增长到 10。
+| 资源名称 | 阈值类型 | 单机阈值 | 流控模式 | 流控效果 | 预热时长 |
+| :---: | :---: | :---: | :---: | :---: | :---: |
+| /testA | QPS | 10 | 直接 | Warm Up | 5s |
+  开始调用 /testA 服务，狂点刷新访问打到 /testA 请求。配置 Warm Up 流控效果，在前 5s 内，通过公式计算阈值为 10/3 = 3，访问超过 3 次便会被限流；5s 后，阈值增长到 10，此时访问超过 3 次也不会被限流，这就是 Warm Up 预热效果。
+###### 19.4.8 流控效果：排队等待
+  排队等待：让请求以均匀的速度通过，对应的是漏桶算法。这种方式主要用于处理间隔性突发的流量，例如消息队列。
+  应用场景：在某一秒有大亮的请求到来，而接下来的几秒则处于空闲状态。我们希望系统能够在接下来的空闲期间逐渐处理这些请求，而不是在第一秒直接拒绝多余的请求。
+![sentinel8](https://gitee.com/clownfish7/image/raw/master/springcloud-alibaba-sentinel/sentinel8.png 'sentinel8')
+  /testA 服务，设置 QPS 单机阈值为 2，每秒只接收 2 个请求。设置超时时间 5s。采用漏斗算法，让后台匀速的处理请求，而不是直接拒绝更多的请求。超时的请求则被抛弃，返回错误信息。
+| 资源名称 | 阈值类型 | 单机阈值 | 流控模式 | 流控效果 | 预热时长 |
+| :---: | :---: | :---: | :---: | :---: | :---: |
+| /testA | QPS | 2 | 直接 | 排队等待 | 5000ms |
+##### 19.5 降级规则
+  降级规则。可自行参考官网介绍：[GitHub 熔断降级](https://github.com/alibaba/Sentinel/wiki/%E7%86%94%E6%96%AD%E9%99%8D%E7%BA%A7 'GitHub 熔断降级')。降级策略有 RT、异常比例、异常数 三种，每一项具体代表的什么含义，继续听我娓娓道来。
+![sentinel9](https://gitee.com/clownfish7/image/raw/master/springcloud-alibaba-sentinel/sentinel9.png 'sentinel9')
+> 资源名：唯一路径，默认为请求路径（也可以是后续介绍的 @SentinelResource 注解的 value 属性值）
+
+###### 19.5.1 RT
+  RT：即 平均响应时间(DEGRADE_GRADE_RT) 。官网介绍太笼统，此处不Copy 了，要看官网介绍来这里：[RT 平均响应时间介绍](https://github.com/alibaba/Sentinel/wiki/%E7%86%94%E6%96%AD%E9%99%8D%E7%BA%A7#%E9%99%8D%E7%BA%A7%E7%AD%96%E7%95%A5 'RT 平均响应时间介绍')
+> 注意 Sentinel 默认统计的 RT 上限是 4900 ms，超出此阈值的都会算作 4900 ms，若需要变更此上限可以通过启动配置项 -Dcsp.sentinel.statistic.max.rt=xxx 来配置。
+
+![sentinel10](https://gitee.com/clownfish7/image/raw/master/springcloud-alibaba-sentinel/sentinel10.png 'sentinel10')
+![sentinel11](https://gitee.com/clownfish7/image/raw/master/springcloud-alibaba-sentinel/sentinel11.png 'sentinel11')
+
+  /testA 服务，设置 降级策略为 RT，RT(平均响应时间)为 200ms，时间窗口为 5s。发送请求平均响应时间在 200ms 内，正常访问不会被熔断降级。当平均响应时间 > 200ms，便会被熔断降级。时间窗口5s内断路器处于打开状态，无法提供服务，时间窗口结束，服务恢复正常访问。就是服务会被熔断5s的意思（切记是平均响应时间）
+
+| 资源名称 | 降级策略 | RT(平均响应时间) | 时间窗口 |
+| :---: | :---: | :---: | :---: |
+| /testA | RT | 200ms | 5s |
+
+  RT降级规则，需要同时满足：1. QPS >= 5 && 2. 平均响应时长 > 200 两个条件。手动发送请求操作看的明显，此时 1秒钟发送 >5 个请求，由于每个请求都 sleep 300ms，请求最终平均响应时间为 300+ ms，肯定 > 200ms。满足上述两个条件，执行 RT 降级规则，开始熔断后，时间窗口期5s内，断路器处于打开状态，此时为熔断阶段，时间窗口结束，断路器关闭，关闭服务熔断，服务可以正常访问。
+###### 19.5.2 异常比例
+  异常比例：QPS >= 5 && 异常比例超过设定的阈值，便会发生服务降级 。
+  异常比例为 0.0~1.0 范围内值。时间窗口就是断路器开启时间长短(降级时间) 。要看官网介绍来这里：[异常比例介绍](https://github.com/alibaba/Sentinel/wiki/%E7%86%94%E6%96%AD%E9%99%8D%E7%BA%A7#%E9%99%8D%E7%BA%A7%E7%AD%96%E7%95%A5 '异常比例介绍')
+
+![sentinel12](https://gitee.com/clownfish7/image/raw/master/springcloud-alibaba-sentinel/sentinel12.png 'sentinel12')
+![sentinel13](https://gitee.com/clownfish7/image/raw/master/springcloud-alibaba-sentinel/sentinel13.png 'sentinel13')
+
+  /testA 服务，设置 降级策略为 异常比例，异常比例设为 0.5，时间窗口为 5s。即：1s 发送6个请求，异常比例超过 50%，就会被熔断，断路器打开5s，5s后自动关闭，继续提供服务。
+
+| 资源名称 | 降级策略 | 异常比例(0.0-1.0) | 时间窗口 |
+| :---: | :---: | :---: | :---: |
+| /testA | 异常比例 | 0.5 | 5s |
+
+  我们配置的异常比例降级规则，需要同时满足：1.QPS>=5 && 2.异常比例> 50% 两个条件。手动发送请求操作看的明显，此时 1秒钟发送 >5 个请求，因为每个请求都是异常，异常比例 100%。
+  如果1s发送6次请求，前3次报错，因为第4次访问后，异常比例 > 50%，第4次便会被熔断，报 Blocked by Sentinel(flow limiting)。5s后继续提供服务哦。
+###### 19.5.3 异常数
+  异常数：指的是资源 近1分钟 的异常数目，超过阈值之后会进行熔断。
+  重点注意：异常数，统计时间窗口是分钟级别，若 timeWindow 小于 60s，则结束熔断状态后仍可能再次进入熔断状态。推荐 时间窗口一定要>=60s
+  官网介绍来这里看：[异常数介绍](https://github.com/alibaba/Sentinel/wiki/%E7%86%94%E6%96%AD%E9%99%8D%E7%BA%A7#%E9%99%8D%E7%BA%A7%E7%AD%96%E7%95%A5 '异常数介绍')
+
+![sentinel14](https://gitee.com/clownfish7/image/raw/master/springcloud-alibaba-sentinel/sentinel14.png 'sentinel14')
+![sentinel15](https://gitee.com/clownfish7/image/raw/master/springcloud-alibaba-sentinel/sentinel15.png 'sentinel15')
+
+  /testA 服务，设置 降级策略为 异常数，异常数设为 5，时间窗口为 60s。即：调用服务，当异常数超过5个时，开启断路器，执行熔断操作。60s 后，断路器关闭，服务恢复正常
+
+| 资源名称 | 降级策略 | 异常数 | 时间窗口 |
+| :---: | :---: | :---: | :---: |
+| /testA | 异常数 | 5 | 60s |
+
+  执行 /testA 服务请求，因为每个请求都是异常，前5次调用正常返回，只是报异常到前台；第6次服务调用时，便会被降级熔断。报 Blocked by Sentinel(flow limiting)。60s后继续提供服务哦。
+##### 19.6 热点规则
+###### 19.6.1 何为热点
+  何为热点？热点即经常访问的数据。很多时候我们希望统计某个热点数据中访问频次最高的 Top K 数据，并对其访问进行限制。比如：
+> 商品 ID 为参数，统计一段时间内最常购买的商品 ID 并进行限制
+> 用户 ID 为参数，针对一段时间内频繁访问的用户 ID 进行限制
+
+  热点参数限流会统计传入参数中的热点参数，并根据配置的限流阈值与模式，对包含热点参数的资源调用进行限流。 热点参数限流可以看做是一种特殊的流量控制，仅对包含热点参数的资源调用生效。
+![sentinel16](https://gitee.com/clownfish7/image/raw/master/springcloud-alibaba-sentinel/sentinel16.png 'sentinel16')
+  Sentinel 利用 LRU 策略统计最近最常访问的热点参数，结合令牌桶算法来进行参数级别的流控。热点参数限流支持集群模式。(详细介绍，参考：[Github 热点规则官方介绍](https://github.com/alibaba/Sentinel/wiki/%E7%83%AD%E7%82%B9%E5%8F%82%E6%95%B0%E9%99%90%E6%B5%81 'Github 热点规则官方介绍'))
+###### 19.6.2 何为热点限流
+  一句话解释：根据 url 传递进来的参数进行限流。带这个参数就限流，不带就不限流。
+###### 19.6.3 热点规则
+  热点规则。可自行参考官网介绍：[GitHub 热点参数限流](https://github.com/alibaba/Sentinel/wiki/%E7%83%AD%E7%82%B9%E5%8F%82%E6%95%B0%E9%99%90%E6%B5%81 'GitHub 热点参数限流')，共有 资源名、限流模式(只支持QPS模式)、参数索引、单机阈值、统计窗口时长、是否集群 六种参数；高级选项还有额外一些参数，在用到时介绍。每一项具体代表的什么含义，来继续听我絮絮叨叨吧。
+![sentinel17](https://gitee.com/clownfish7/image/raw/master/springcloud-alibaba-sentinel/sentinel17.png 'sentinel17')
+> 资源名：唯一路径，默认为请求路径。此处必须是 @SentinelResource 注解的 value 属性值，配置@GetMapping 的请求路径无效）
+> 参数索引：参数索引（从0开始，0表示第一个参数、1表示第二个参数）
+
+  @SentinelResource 注解，与 @HystrixCommand 类似，也是用来定义服务降级 兜底方法 的注解。该注解有很多属性可以配置。
+  对 /testC 服务，配置热点key限流。当 1.参数 name 存在   2.一秒内调用 /testC 服务 > 5次，满足限流规则。服务将被熔断。断路器打开，5s 后服务恢复正常
+  
+| 资源名称 | 参数索引 | 单机阈值 | 统计窗口时长 |
+| :---: | :---: | :---: | :---: |
+| (不能是请求路径，否则无效) | 1 | 5 | 5s |
+
+  调用 URL：http://localhost:8401/testC?id=1&name=James，1.参数 name 存在   2.一秒内调用 /testC 服务 > 5次，满足限流规则。服务将被熔断。断路器打开，5s 后服务恢复正常。
+  
+  被限流后，直接报错 java.lang.refletc.UndeclaredThrowableException。异常显示到前台用户界面，显然不是不友好。
+  此处也是需要用到 @SentinelResource 的 blockHandler 属性，它是 Sentinel控制台违规的兜底方法配置(还会介绍一个 fallback属性，它是@GetMapping请求Java 方法执行出现异常的兜底方法配置，要分清楚)
+
+  当 name 参数值为 Wade 时，限流阈值变更为 100。此时就需要对 参数例外项 进行配置了。
+  参数类型 支持：int、double、String、long、float、char、byte 7种类型，参数值 指 name 参数的值，限流阈值 指该参数值允许的阈值。
+![sentinel18](https://gitee.com/clownfish7/image/raw/master/springcloud-alibaba-sentinel/sentinel18.png 'sentinel18')
+
+##### 19.7 系统规则
+  系统保护规则是从应用级别的入口流量进行控制，从单台机器的 load、CPU 使用率、平均 RT、入口 QPS 和并发线程数等几个维度监控应用指标，让系统尽可能跑在最大吞吐量的同时保证系统整体的稳定性。
+  系统保护规则是应用整体维度的，而不是资源维度的，并且仅对入口流量生效。入口流量指的是进入应用的流量（EntryType.IN），比如 Web 服务或 Dubbo 服务端接收的请求，都属于入口流量。
+  Sentinel 系统自适应限流从整体维度对应用入口流量进行控制，结合应用的 Load、CPU 使用率、总体平均 RT、入口 QPS 和并发线程数等几个维度的监控指标，通过自适应的流控策略，让系统的入口流量和系统的负载达到一个平衡，让系统尽可能跑在最大吞吐量的同时保证系统整体的稳定性。
+###### 19.7.1 系统规则支持以下模式
++ Load 自适应（仅对 Linux/Unix-like 机器生效）：系统的 load1 作为启发指标，进行自适应系统保护。当系统 load1 超过设定的启发值，且系统当前的并发线程数超过估算的系统容量时才会触发系统保护（BBR 阶段）。系统容量由系统的 maxQps * minRt 估算得出。设定参考值一般是 CPU cores * 2.5。
++ CPU usage（1.5.0+ 版本）：当系统 CPU 使用率超过阈值即触发系统保护（取值范围 0.0-1.0），比较灵敏。
++ 平均 RT：当单台机器上所有入口流量的平均 RT 达到阈值即触发系统保护，单位是毫秒。
++ 并发线程数：当单台机器上所有入口流量的并发线程数达到阈值即触发系统保护。
++ 入口 QPS：当单台机器上所有入口流量的 QPS 达到阈值即触发系统保护。
+
+  此处内容，CPU 使用率、总平均 RT、并发线程数 等也不好演示，理解意思知道有这块用于全局应用入口流量控制就可以了，详细介绍还是参考官网来吧：[热点参数限流](https://github.com/alibaba/Sentinel/wiki/%E7%B3%BB%E7%BB%9F%E8%87%AA%E9%80%82%E5%BA%94%E9%99%90%E6%B5%81 '热点参数限流')
+###### 19.7.2 入口QPS配置
+  入口QPS，实用性还是比较危险的。 如果 sentinel 密码被修改，将你的整个系统 入口QPS 配置很小，那么整个系统就瘫痪了。
+  但是 入口QPS 有总控的功能。最终选择是否使用，还是视情况而定吧
+![sentinel19](https://gitee.com/clownfish7/image/raw/master/springcloud-alibaba-sentinel/sentinel19.png 'sentinel19')
+  整个系统，每个请求 QPS = 1 正常访问，当该请求 QPS >1 就会被限流。
+##### 19.8 @SentinelResource 的用法
+  @SentinelResource 可以说是 Sentinel 学习的突破口，搞懂了这个注解的应用，基本上就搞清楚了 Sentinel 的大部分应用场景。Sentinel 提供了 @SentinelResource 注解用于定义资源，并提供了AspectJ的扩展用于自动定义资源、处理BlockException等。
+###### 19.8.1 @SentinelResource 属性介绍
+
+|       属性名       | 是否必填 | 说明                                                         |
+| :----------------: | :------: | :----------------------------------------------------------- |
+|       value        |    是    | 资源名称 。（必填项，需要通过 `value` 值找到对应的规则进行配置） |
+|     entryType      |    否    | entry类型，标记流量的方向，取值IN/OUT，默认是OUT             |
+|    blockHandler    |    否    | **处理BlockException的函数名称(可以理解为对Sentinel的配置进行方法兜底)**。函数要求：<br/>1.必须是 public 修饰<br/>2.返回类型与原方法一致<br/>3. 参数类型需要和原方法相匹配，并在最后加 BlockException 类型的参数。<br/>4. 默认需和原方法在同一个类中。若希望使用其他类的函数，可配置 blockHandlerClass ，并指定blockHandlerClass里面的方法。 |
+| blockHandlerClass  |    否    | **存放blockHandler的类**。<br/>对应的处理函数必须 public static 修饰，否则无法解析，其他要求：同blockHandler。 |
+|      fallback      |    否    | **用于在抛出异常的时候提供fallback处理逻辑(可以理解为对Java异常情况方法兜底)**。 fallback函数可以针对所有类型的异常（除了 exceptionsToIgnore 里面排除掉的异常类型）进行处理。函数要求： 1.返回类型与原方法一致 2.参数类型需要和原方法相匹配，Sentinel 1.6开始，也可在方法最后加 Throwable 类型的参数。 3.默认需和原方法在同一个类中。若希望使用其他类的函数，可配置 fallbackClass ，并指定fallbackClass里面的方法。 |
+|   fallbackClass    |    否    | **存放fallback的类**。<br/>对应的处理函数必须static修饰，否则无法解析，其他要求：同fallback。 |
+|  defaultFallback   |    否    | **用于通用的 fallback 逻辑**。<br/>默认 fallback 函数可以针对所有类型的异常（除了 exceptionsToIgnore 里面排除掉的异常类型）进行处理。若同时配置了 fallback 和 defaultFallback，以fallback为准。函数要求：<br/>1.返回类型与原方法一致<br/>2.方法参数列表为空，或者有一个 Throwable 类型的参数。<br/>3.默认需要和原方法在同一个类中。若希望使用其他类的函数，可配置 fallbackClass ，并指定 fallbackClass 里面的方法。 |
+| exceptionsToIgnore |    否    | **指定排除掉哪些异常。**<br/>排除的异常不会计入异常统计，也不会进入fallback逻辑，而是原样抛出 |
+| exceptionsToTrace  |    否    | 需要trace的异常 |
+
+
+###### 19.8.2 fallback 指定 Java 异常兜底方法
+  fallback只用来处理与Java逻辑异常相关的兜底。比如：NullPointerException、ArrayIndexOutOfBoundsException 等Java代码中的异常，fallback 指定的兜底方法便会生效。
+###### 19.8.3 blockHandler 指定 Sentinel 配置兜底方法
+  blockHandler 只用来处理 与 Sentinel 配置有关的兜底。比如：配置某资源 QPS =1，当 QPS >1 时，blockHandler 指定的兜底方法便会生效。
+###### 19.8.4 exceptionsToIgnore 用于指定异常不走兜底方法
+  使用 exceptionsTolgnore 属性，来 指定某些异常不执行兜底方法，直接显示错误信息。配置 ArithmeticException 异常不走兜底方法。java.lang.ArithmeticException: / by zero ，便不会再执行兜底方法，直接显示错误信息给前台页面。
+###### 19.8.5 defaultFallback 用于指定通用的 fallback 兜底方法
+  使用 defaultFallback 来指定通用的 fallback 兜底方法。
+1. 如果当前业务配置有 defaultFallback 和 fallback 两个属性，则优先执行 fallback 指定的方法。
+2. 如果 fallback 指定的方法不存在，还会执行 defaultFallback 指定的方法。
+
+  搭配 openFeign 时需要开启 sentinel 支持 application.yml
+```yml
+feign:
+  sentinel:
+    enabled: true
+```
+##### 19.9 Sentinel 控制台规则持久化
+  在 Sentinel 中，我们会为多个服务进行 流控、限流、热点 等规则 的配置，但是当服务重启后再进入 Sentinel 后，发现之前配置过的规则都不在了，这样子的体验显然不友好，此时就需要我们对 Sentinel 中配置的规则规则进行持久化操作。
+
+  目前控制台的规则推送也是通过 规则查询更改 HTTP API 来更改规则。这也意味着这些规则 仅在内存态生效，应用重启之后，该规则会丢失。
+  
+  搭配 nacos 持久化 pom.xml
+```xml
+<dependency>
+    <groupId>com.alibaba.csp</groupId>
+    <artifactId>sentinel-datasource-nacos</artifactId>
+</dependency>
+```
+  application.yml
+```yml
+server:
+  port: 84
+spring:
+  application:
+    name: nacos-order-consumer
+  cloud:
+    nacos:
+      discovery: #Nacos注册中心地址
+        server-addr: 47.97.8.7:8848
+    sentinel:
+      transport: #dashboard地址
+        dashboard: localhost:8080
+        port: 8719  #默认端口，如果被占用则从8719依次+1扫描
+      datasource:
+        ds1:
+          nacos:
+            server-addr: 47.97.8.7:8848
+            dataId: ${spring.application.name}
+            groupId: DEFAULT_GROUP
+            data-type: json
+            rule-type: flow
+service-url:
+  nacos-user-service: http://nacos-payment-provider
+
+feign:
+  sentinel:
+    enabled: true
+```
+  在 nacos 中配置规则
+![sentinel20](https://gitee.com/clownfish7/image/raw/master/springcloud-alibaba-sentinel/sentinel20.png 'sentinel20')
+
+```json
+[
+    {
+        "resource": "/consumer/paymentSQL/{id}",
+        "limitApp": "default",
+        "grade": 1,
+        "count": 2,
+        "strategy": 0,
+        "controlBehavior": 0,
+        "clusterMode": false
+    }
+]
+```
++ resource 
+  + 资源名称
++ limitApp
+  + 来源应用
++ grade
+  + 阈值类型：0-线程数，1-QPS
++ count
+  + 单机阈值
++ strategy
+  + 流控模式：0-直接，1-关联，2-链路
++ controlBehavior
+  + 流控效果：0-快速失败，1-Warm Up，2-排队等待
++ clusterMode
+  + 是否集群
 #### 20. SpringCloud Alibaba Seata 处理分布式事务
 1. [Seata 官网](http://seata.io/zh-cn/index.html 'Seata 官网')
 2. [Seata 源码 GitHub 地址](https://github.com/seata/seata 'Seata 源码 GitHub 地址')
@@ -2667,6 +3012,7 @@ pom.xml @EnableDiscoveryClient @GlobalTransactional
 ```
 
 ```java
+
 ```
 
 ##### 20.3 AT 模式
