@@ -2634,7 +2634,7 @@ docker run -d \
 seataio/seata-server
 ```
 file.json
-```json
+```shell
 transport {
   # tcp udt unix-domain-socket
   type = "TCP"
