@@ -38,15 +38,15 @@
 
 2. 零售：分析用户消费习惯，为用户购买商品提供方便，从而提升商品销量。经典案例，子尿布+啤酒。
 
-   ![image-20210116155151412](D:\you\projects\markdown\bigdata\Hadoop.assets\image-20210116155151412.png)
+   ![image-20210116155151412](.\Hadoop.assets\image-20210116155151412.png)
 
 3. 旅游：深度结合大数据能力与旅游行业需求，共建旅游产业智慧管理、智慧服务和智慧营销的未来。
 
-   ![image-20210116155303273](D:\you\projects\markdown\bigdata\Hadoop.assets\image-20210116155303273.png)
+   ![image-20210116155303273](.\Hadoop.assets\image-20210116155303273.png)
 
 4. 商品广告推荐：给用户推荐可能喜欢的商品
 
-   ![image-20210116155503863](D:\you\projects\markdown\bigdata\Hadoop.assets\image-20210116155503863.png)
+   ![image-20210116155503863](.\Hadoop.assets\image-20210116155503863.png)
 
 5. 保险：海量数据挖掘及风险预测，助力保险行业精准营销，提升精细化定价能力。
 
@@ -56,17 +56,17 @@
 
 8. 人工智能
 
-   ![image-20210116155357353](D:\you\projects\markdown\bigdata\Hadoop.assets\image-20210116155357353.png)
+   ![image-20210116155357353](.\Hadoop.assets\image-20210116155357353.png)
 
 ### 1.4 大数据发展前景
 
 ### 1.5 大数据部门业务流程分析
 
-![image-20210116155615319](D:\you\projects\markdown\bigdata\Hadoop.assets\image-20210116155615319.png)
+![image-20210116155615319](.\Hadoop.assets\image-20210116155615319.png)
 
 ### 1.6 大数据部门组织结构（重点）
 
-![image-20210116155653269](D:\you\projects\markdown\bigdata\Hadoop.assets\image-20210116155653269.png)
+![image-20210116155653269](.\Hadoop.assets\image-20210116155653269.png)
 
 
 
@@ -80,13 +80,13 @@
 
 3. 广义上来说，Hadoop通常是指一个更广泛的概念——Hadoop生态圈。
 
-![image-20210116155828502](D:\you\projects\markdown\bigdata\Hadoop.assets\image-20210116155828502.png)
+![image-20210116155828502](.\Hadoop.assets\image-20210116155828502.png)
 
 ### 2.2 Hadoop发展历史
 
 1. Lucene框架是`Doug Cutting`开创的开源软件，用Java书写代码，实现与Google类似的全文搜索功能，它提供了全文检索引擎的架构，包括完整的查询引擎和索引引擎。
 
-   ![image-20210116161045074](D:\you\projects\markdown\bigdata\Hadoop.assets\image-20210116161045074.png)
+   ![image-20210116161045074](.\Hadoop.assets\image-20210116161045074.png)
 
 2. 2001年年底Lucene成为Apache基金会的一个子项目。
 
@@ -104,7 +104,7 @@
 
 9. 名字来源于Doug Cutting儿子的玩具大象。
 
-   ![image-20210116161116066](D:\you\projects\markdown\bigdata\Hadoop.assets\image-20210116161116066.png)
+   ![image-20210116161116066](.\Hadoop.assets\image-20210116161116066.png)
 
 ### 2.3 Hadoop三大发行版本
 
@@ -154,15 +154,15 @@ Hadoop三大发行版本：Apache、Cloudera、Hortonworks。
 
 ### 2.5 Hadoop组成（面试重点）
 
-![image-20210116160341011](D:\you\projects\markdown\bigdata\Hadoop.assets\image-20210116160341011.png)
+![image-20210116160341011](.\Hadoop.assets\image-20210116160341011.png)
 
 #### 2.5.1 HDFS架构概述
 
-![image-20210116160649808](D:\you\projects\markdown\bigdata\Hadoop.assets\image-20210116160649808.png)
+![image-20210116160649808](.\Hadoop.assets\image-20210116160649808.png)
 
 #### 2.5.2 YARN架构概述
 
-![image-20210116160625723](D:\you\projects\markdown\bigdata\Hadoop.assets\image-20210116160625723.png)
+![image-20210116160625723](.\Hadoop.assets\image-20210116160625723.png)
 
 #### 2.5.3 MapReduce架构概述
 
@@ -172,11 +172,11 @@ MapReduce将计算过程分为两个阶段：Map和Reduce
 
 2. Reduce阶段对Map结果进行汇总
 
-![image-20210116160553866](D:\you\projects\markdown\bigdata\Hadoop.assets\image-20210116160553866.png)
+![image-20210116160553866](.\Hadoop.assets\image-20210116160553866.png)
 
 ### 2.6 大数据技术生态体系
 
-![image-20210116155949747](D:\you\projects\markdown\bigdata\Hadoop.assets\image-20210116155949747.png)
+![image-20210116155949747](.\Hadoop.assets\image-20210116155949747.png)
 
 1. Sqoop：Sqoop是一款开源的工具，主要用于在Hadoop、Hive与传统的数据库(MySql)间进行数据的传递，可以将一个关系型数据库（例如 ：MySQL，Oracle 等）中的数据导进到Hadoop的HDFS中，也可以将HDFS的数据导进到关系型数据库中。
 2. Flume：Flume是Cloudera提供的一个高可用的，高可靠的，分布式的海量日志采集、聚合和传输的系统，Flume支持在日志系统中定制各类数据发送方，用于收集数据；同时，Flume提供对数据进行简单处理，并写到各种数据接受方（可定制）的能力。
@@ -196,7 +196,7 @@ MapReduce将计算过程分为两个阶段：Map和Reduce
 
 ### 2.7 推荐系统框架图
 
-![image-20210116155913201](D:\you\projects\markdown\bigdata\Hadoop.assets\image-20210116155913201.png)
+![image-20210116155913201](.\Hadoop.assets\image-20210116155913201.png)
 
 
 ## 3. Hadoop运行环境搭建（开发重点）
