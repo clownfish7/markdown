@@ -328,20 +328,226 @@ mapreduce	1
 yarn	1
 ```
 
-
-
-
 ### 4.2 伪分布式运行模式
 
 #### 4.2.1 启动HDFS并运行MapReduce程序
 
+1. 分析
+   1. 配置集群
+   2. 启动、测试集群增、删、查
+   3. 执行WordCount案例
+   
+2. 执行步骤
+    1. 配置集群
+        1. 配置：hadoop-env.sh
+	     Linux系统中获取JDK的安装路径 echo $JAVA_HOME
+	    /opt/module/jdk1.8.0_144
+	     修改JAVA_HOME 路径：
+	    export JAVA_HOME=/opt/module/jdk1.8.0_144
+	    2. 配置：core-site.xml
+            <!-- 指定HDFS中NameNode的地址 -->
+            <property>
+                <name>fs.defaultFS</name>
+                <value>hdfs://hadoopHost:9000</value>
+            </property>
+
+            <!-- 指定Hadoop运行时产生文件的存储目录 -->
+            <property>
+                <name>hadoop.tmp.dir</name>
+                <value>/opt/module/hadoop-2.7.2/data/tmp</value>
+            </property>
+		3. 配置：hdfs-site.xml
+			<!-- 指定HDFS副本的数量 -->
+			<property>
+    			<name>dfs.replication</name>
+    			<value>1</value>
+			</property>
+
+	2. 启动集群
+	
+		1. 格式化NameNode（第一次启动时格式化，以后就不要总格式化）
+			bin/hdfs namenode -format
+		2. 启动NameNode
+			sbin/hadoop-daemon.sh start namenode
+		3. 启动DataNode
+			sbin/hadoop-daemon.sh start datanode
+	
+	3. 查看集群
+	
+		查看是否启动成功
+		$ jps
+		**注意：jps是JDK中的命令，不是Linux命令。不安装JDK不能使用jps**
+	
+		web端查看HDFS文件系统
+			http://hadoop101:50070/dfshealth.html#tab-overview
+		注意：如果不能查看，看如下帖子处理
+			http://www.cnblogs.com/zlslch/p/6604189.html
+		查看产生的Log日志
+		目录：hadoop-2.7.2/logs
+	
+		<font color='red'>思考：为什么不能一直格式化NameNode，格式化NameNode，要注意什么？</font>
+		cat data/tmp/dfs/name/current/VERSION
+		cat data/tmp/dfs/data/current/VERSION
+		<font color='red'>注意：格式化NameNode，会产生新的集群id,导致NameNode和DataNode的集群id不一致，集群找不到已往数据。所以，格式NameNode时，一定要先删除data数据和log日志，然后再格式化NameNode。</font>
+	
+	4. 操作集群
+	
+		1. 在HDFS文件系统上**创建**一个input文件夹
+			bin/hdfs dfs -mkdir -p /user/clownfish7/input
+		2. 测试文件内容上传到文件系统上
+			bin/hdfs dfs -put wcinput/wc.input /user/clownfish7/input/
+		3. 查看上传的文件是否正确
+			bin/hdfs dfs -ls  /user/clownfish7/input/
+			bin/hdfs dfs -cat  /user/clownfish7/ input/wc.input
+		4. 运行MapReduce程序
+			bin/hadoop jar share/hadoop/mapreduce/hadoop-mapreduce-examples-2.7.2.jar wordcount /user/clownfish7/input/ /user/clownfish7/output
+		5. 查看输出结果
+			bin/hdfs dfs -cat /user/clownfish7/output/*
+		6. 将测试文件内容下载到本地
+			hdfs dfs -get /user/clownfish7/output/part-r-00000 ./wcoutput/
+		7. 删除输出结果
+			hdfs dfs -rm -r /user/clownfish7/output
+
+
 #### 4.2.2 启动YARN并运行MapReduce程序
+
+1. 分析
+	1. 配置集群在YARN上运行MR
+	2. 启动、测试集群增、删、查
+	3. 在YARN上执行WordCount案例
+2. 执行步骤
+	1. 配置集群
+		a. 配置yarn-env.sh
+			export JAVA_HOME=/opt/module/jdk1.8.0_144
+		b. 配置yarn-site.xml
+			<!-- Reducer获取数据的方式 -->
+			<property>
+				<name>yarn.nodemanager.aux-services</name>
+				<value>mapreduce_shuffle</value>
+			</property>
+			<!-- 指定YARN的ResourceManager的地址 -->
+			<property>
+				<name>yarn.resourcemanager.hostname</name>
+				<value>hadoopHost</value>
+			</property>
+		c. 配置：mapred-env.sh
+			export JAVA_HOME=/opt/module/jdk1.8.0_144
+		d. 配置： (对mapred-site.xml.template重新命名为) mapred-site.xml 
+			mv mapred-site.xml.template mapred-site.xml
+			vi mapred-site.xml
+			<!-- 指定MR运行在YARN上 -->
+			<property>
+				<name>mapreduce.framework.name</name>
+				<value>yarn</value>
+			</property>
+	2. 启动集群
+		a. 启动前必须保证NameNode和DataNode已经启动
+		b. 启动ResourceManager
+			sbin/yarn-daemon.sh start resourcemanager
+		c. 启动NodeManager
+			sbin/yarn-daemon.sh start nodemanager
+	3. 集群操作
+		a. YARN的浏览器页面查看
+			http://hadoophost:8088/cluster
+		b. 删除文件系统上的output文件
+			bin/hdfs dfs -rm -R /user/atguigu/output
+		c. 执行MapReduce程序
+			bin/hadoop jar share/hadoop/mapreduce/hadoop-mapreduce-examples-2.7.2.jar wordcount /user/clownfish7/input  /user/clownfish7/output
+		d. 查看运行结果
+			bin/hdfs dfs -cat /user/atguigu/output/*
 
 #### 4.2.3 配置历史服务器
 
+为了查看程序的历史运行情况，需要配置一下历史服务器。具体配置步骤如下：
+
+1.  配置mapred-site.xml
+
+    1.  vi mapred-site.xml
+
+    2.  <!-- 历史服务器端地址 -->
+        <property>
+            <name>mapreduce.jobhistory.address</name>
+            <value>hadoopHost:10020</value>
+        </property>
+        <!-- 历史服务器web端地址 -->
+        <property>
+            <name>mapreduce.jobhistory.webapp.address</name>
+            <value>hadoopHost:19888</value>
+        </property>
+
+2.  启动历史服务器
+
+    1.  sbin/mr-jobhistory-daemon.sh start historyserver
+
+3.  查看历史服务器是否启动
+
+    1.  jps
+
+4.  查看JobHistory
+
+    1.  http://hadoophost:19888/jobhistory
+
 #### 4.2.4 配置日志的聚集
 
+日志聚集概念：应用运行完成以后，将程序运行日志信息上传到HDFS系统上。
+
+日志聚集功能好处：可以方便的查看到程序运行详情，方便开发调试。
+
+<font color='red'>注意：开启日志聚集功能，需要重新启动NodeManager 、ResourceManager和HistoryManager。</font>
+
+开启日志聚集功能具体步骤如下：
+
+1.  配置yarn-site.xml
+
+    1.  <!-- 日志聚集功能使能 -->
+        <property>
+        <name>yarn.log-aggregation-enable</name>
+        <value>true</value>
+        </property>
+
+        <!-- 日志保留时间设置7天 -->
+        <property>
+        <name>yarn.log-aggregation.retain-seconds</name>
+        <value>604800</value>
+        </property>
+
+2.  关闭NodeManager 、ResourceManager和HistoryManager
+
+    1.  sbin/yarn-daemon.sh stop resourcemanager
+    2.  sbin/yarn-daemon.sh stop nodemanager
+    3.  sbin/mr-jobhistory-daemon.sh stop historyserver
+
+3.  启动NodeManager 、ResourceManager和HistoryManager
+
+    1.  sbin/yarn-daemon.sh start resourcemanager
+    2.  sbin/yarn-daemon.sh start nodemanager
+    3.  sbin/mr-jobhistory-daemon.sh start historyserver
+
+4.  删除HDFS上已经存在的输出文件
+
+    1.  bin/hdfs dfs -rm -R /user/clownfish7/output
+
+5.  执行WordCount程序
+
+    1.  hadoop jar
+
+         share/hadoop/mapreduce/hadoop-mapreduce-examples-2.7.2.jar wordcount /user/clownfish7/input /user/clownfish7/output
+
+6.  查看日志
+
+    1.  http://hadoopHost:19888/jobhistory
+
 #### 4.2.5 配置文件说明
+
+默认配置文件：
+要获取的默认文件	文件存放在Hadoop的jar包中的位置
+[core-default.xml]	hadoop-common-2.7.2.jar/ core-default.xml
+[hdfs-default.xml]	hadoop-hdfs-2.7.2.jar/ hdfs-default.xml
+[yarn-default.xml]	hadoop-yarn-common-2.7.2.jar/ yarn-default.xml
+[mapred-default.xml]	hadoop-mapreduce-client-core-2.7.2.jar/ mapred-default.xml
+
+自定义配置文件：
+core-site.xml、hdfs-site.xml、yarn-site.xml、mapred-site.xml四个配置文件存放在$HADOOP_HOME/etc/hadoop这个路径上，用户可以根据项目需求重新进行修改配置。
 
 
 ### 4.3 完全分布式运行模式（开发重点）
