@@ -636,3 +636,63 @@ modules:
     prober: icmp
 ```
 
+blackboxstats-alert.rules
+```yml
+groups:
+  - name: blackboxStatsAlert
+    rules:
+      - alert: blackboxProbeFailedAlert
+        expr: probe_success == 0
+        for: 1m
+        labels:
+          severity: page
+          dingAt: 18892621587
+        annotations:
+          summary: "Blackbox probe failed (instance {{ $labels.instance }})"
+          description: "Probe failed\n  VALUE = {{ $value }}\n instance {{ $labels.instance }}"
+      - alert: blackboxSlowProbeAlert
+        expr: avg_over_time(probe_duration_seconds[1m]) > 3
+        for: 1m
+        labels:
+          severity: page
+          dingAt: 18892621587
+        annotations:
+          summary: "Blackbox slow probe (instance {{ $labels.instance }})"
+          description: "Blackbox probe took more than 3s to complete\n  VALUE = {{ $value }}\n instance {{ $labels.instance }}"
+      - alert: blackboxProbeHttpFailureAlert
+        expr: probe_http_status_code <= 199 OR probe_http_status_code >= 400
+        for: 1m
+        labels:
+          severity: page
+          dingAt: 18892621587
+        annotations:
+          summary: "Blackbox probe HTTP failure (instance {{ $labels.instance }})"
+          description: "HTTP status code is not 200-399\n VALUE = {{ $value }}\n instance {{ $labels.instance }}"
+      - alert: blackboxProbeSlowHttpAlert
+        expr: avg_over_time(probe_http_duration_seconds[1m]) > 3
+        for: 1m
+        labels:
+          severity: page
+          dingAt: 18892621587
+        annotations:
+          summary: "Blackbox probe slow HTTP (instance {{ $labels.instance }})"
+          description: "HTTP request took more than 3s\n VALUE = {{ $value }}\n instance {{ $labels.instance }}"
+      - alert: blackboxProbeSlowPingAlert
+        expr: avg_over_time(probe_icmp_duration_seconds[1m]) > 3
+        for: 1m
+        labels:
+          severity: page
+          dingAt: 18892621587
+        annotations:
+          summary: "Blackbox probe slow ping (instance {{ $labels.instance }})"
+          description: "Blackbox ping took more than 3s\n  VALUE = {{ $value }}\n instance {{ $labels.instance }}"
+      - alert: blackboxSslCertificateWillExpireSoonAlert
+        expr: probe_ssl_earliest_cert_expiry - time() < 86400 * 30
+        for: 1m
+        labels:
+          severity: page
+          dingAt: 18892621587
+        annotations:
+          summary: "Blackbox SSL certificate will expire soon (instance {{ $labels.instance }})"
+          description: "SSL certificate expires in 30 days\n VALUE = {{ $value }}\n instance {{ $labels.instance }}"
+```

@@ -230,4 +230,4 @@ public ConfigurableApplicationContext run(String... args) {
 		return context;
 	}
 ```
-
+注册主启动类，ConfigurationClassPostProcesser
